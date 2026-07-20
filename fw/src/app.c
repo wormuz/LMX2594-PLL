@@ -2,6 +2,7 @@
  * Fixes: B1 (idle powerdown), B4 (working sweep), keeps LMX + settings in sync.
  * See research/new-firmware-interface.md, thermal-and-powerdown.md. */
 #include "app.h"
+#include "ui.h"
 #include "lmx2594.h"
 #include "settings.h"
 #include <stdio.h>
@@ -56,21 +57,21 @@ void app_set_lo(uint32_t f_khz)
 {
     g_set.f_lo_khz = f_khz;
     if (st != ST_IDLE_ALLOFF) lmx_set_freq_khz(f_khz);
-    settings_mark_dirty();
+    settings_mark_dirty(); ui_mark_dirty();
 }
 
 void app_output_enable(int which, bool on)
 {
     if (which == 0) g_set.outa_en = on; else g_set.outb_en = on;
     apply_outputs();
-    settings_mark_dirty();
+    settings_mark_dirty(); ui_mark_dirty();
 }
 
 void app_set_power(int which, uint8_t pwr)
 {
     if (which == 0) { g_set.outa_pwr = pwr; lmx_set_power(LMX_OUTA, pwr); }
     else            { g_set.outb_pwr = pwr; lmx_set_power(LMX_OUTB, pwr); }
-    settings_mark_dirty();
+    settings_mark_dirty(); ui_mark_dirty();
 }
 
 void app_set_f1(uint32_t f){ g_set.f1_khz = f; settings_mark_dirty(); }

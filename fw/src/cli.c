@@ -39,28 +39,33 @@ static void dispatch(void)
     if (line[0] == 's' && len == 1) { app_save(); reply("SAVED\r\n"); return; }
     if (line[0] == 'r' && len == 1) { NVIC_SystemReset(); return; }
 
+    char r[48];
     if (line[0] == 'w') {
         char c = line[1];
-        /* legacy 8-digit freq fields (fix B7: require exact length + range) */
         if ((c=='1'||c=='2'||c=='3') && len == 10 && parse_digits(line+2, 8, &v)) {
             if ((c!='3') && !freq_ok(v)) { reply("ERR range\r\n"); return; }
             if (c=='1') app_set_f1(v); else if (c=='2') app_set_f2(v); else app_set_step(v);
-            reply("OK\r\n"); return;
+            snprintf(r,sizeof r,"OK %c=%lu kHz\r\n", c, (unsigned long)v); reply(r); return;
         }
-        if (c=='t' && len == 6 && parse_digits(line+2, 4, &v)) { app_set_dwell((uint16_t)v); reply("OK\r\n"); return; }
-        if (c=='v' && len == 4 && parse_digits(line+2, 2, &v)) { app_set_power(0, (uint8_t)(v>63?63:v)); reply("OK\r\n"); return; }
-        /* new: enable/disable + direct freq */
-        if (c=='a' && len == 3 && (line[2]=='0'||line[2]=='1')) { app_output_enable(0, line[2]=='1'); reply("OK\r\n"); return; }
-        if (c=='b' && len == 3 && (line[2]=='0'||line[2]=='1')) { app_output_enable(1, line[2]=='1'); reply("OK\r\n"); return; }
+        if (c=='t' && len == 6 && parse_digits(line+2, 4, &v)) {
+            app_set_dwell((uint16_t)v); snprintf(r,sizeof r,"OK dwell=%lu ms\r\n",(unsigned long)v); reply(r); return; }
+        if (c=='v' && len == 4 && parse_digits(line+2, 2, &v)) {
+            uint8_t p=(uint8_t)(v>63?63:v); app_set_power(0,p);
+            snprintf(r,sizeof r,"OK OUTA pwr=%u\r\n",p); reply(r); return; }
+        if (c=='a' && len == 3 && (line[2]=='0'||line[2]=='1')) {
+            app_output_enable(0, line[2]=='1'); snprintf(r,sizeof r,"OK Down=%s\r\n",line[2]=='1'?"ON":"OFF"); reply(r); return; }
+        if (c=='b' && len == 3 && (line[2]=='0'||line[2]=='1')) {
+            app_output_enable(1, line[2]=='1'); snprintf(r,sizeof r,"OK Up=%s\r\n",line[2]=='1'?"ON":"OFF"); reply(r); return; }
         if (c=='f' && len == 10 && parse_digits(line+2, 8, &v)) {
             if (!freq_ok(v)) { reply("ERR range\r\n"); return; }
-            app_set_lo(v); reply("OK\r\n"); return;
+            app_set_lo(v); snprintf(r,sizeof r,"OK LO=%lu kHz\r\n",(unsigned long)v); reply(r); return;
         }
     }
     if (line[0] == 'p' && (line[1]=='a'||line[1]=='b') && len == 4 && parse_digits(line+2, 2, &v)) {
-        app_set_power(line[1]=='b', (uint8_t)(v>63?63:v)); reply("OK\r\n"); return;
+        uint8_t p=(uint8_t)(v>63?63:v); app_set_power(line[1]=='b', p);
+        snprintf(r,sizeof r,"OK OUT%c pwr=%u\r\n", line[1]=='b'?'B':'A', p); reply(r); return;
     }
-    reply("ERR\r\n");
+    reply("ERR unknown cmd\r\n");
 }
 
 void cli_rx_byte(char c)

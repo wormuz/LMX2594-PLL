@@ -99,6 +99,7 @@ int main(void)
     buttons_init();
     ui_init();
     app_init();          /* loads settings, inits LMX, applies output/thermal state */
+    uart_out("LMX2594 ready\r\n");   /* boot banner: confirms TX + baud on host */
 
     for (;;) {
         btn_t b = buttons_poll(now());
