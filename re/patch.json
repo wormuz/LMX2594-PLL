@@ -1,0 +1,33 @@
+{
+ "note": "Apply to firmware.bin. Addresses are flash (0x08000000 base); file offset = addr-0x08000000.",
+ "patches": [
+  {
+   "addr": "0x080052ac",
+   "file_off": "0x52ac",
+   "orig": "fc f7 e0 ff",
+   "new": "06 f0 80 f9",
+   "desc": "BL suspend cb -> thunk_powerdown"
+  },
+  {
+   "addr": "0x08004848",
+   "file_off": "0x4848",
+   "orig": "ff f7 3a fa",
+   "new": "06 f0 c0 fe",
+   "desc": "BL resume cb -> thunk_restore"
+  },
+  {
+   "addr": "0x0800B5B0",
+   "file_off": "0xB5B0",
+   "orig": "ff*26",
+   "new": "00 b5 f6 f7 5d fe 40 f2 e3 10 c0 f2 2c 00 fb f7 19 fa 01 20 fb f7 16 fa 00 bd",
+   "desc": "thunk_powerdown"
+  },
+  {
+   "addr": "0x0800B5CC",
+   "file_off": "0xB5CC",
+   "orig": "ff*28",
+   "new": "00 b5 f8 f7 77 fb 40 f2 a3 10 c0 f2 2c 00 fb f7 0b fa 42 f2 1c 50 fb f7 07 fa 00 bd",
+   "desc": "thunk_restore"
+  }
+ ]
+}

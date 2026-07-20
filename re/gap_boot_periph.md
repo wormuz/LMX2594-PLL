@@ -1,0 +1,29 @@
+`FUN_08002974` is called only from `0x08006474`, right in the boot sequence before the 114-register block at 0x08002a02 begins (which matches — 0x08002a02 is literally the first `bl FUN_080069f4` writing R112). Let's see full context around 0x08006474 in FUN_08006410's prologue/caller chain (that address is inside FUN_08006410 body — actually FUN_08006410 starts at 0x08006410, and 0x08006474 is within it, meaning FUN_08002974 is what I labeled `FUN_08002974` call inside FUN_08006410 which I saw as `FUN_08002974()` with no args? Let me re-check: in the earlier FUN_08006410 decompile there was no explicit `FUN_08002974()` — actually yes there was: `FUN_08002974();`. Good, confirms placement, called once at boot before power sequences.
+
+Sequence at end of `FUN_08002974` (continuing from 0x080029ec): `PB(0x1000=PB12) → GPIO_SetBits`, then `PB(0x2=PB1) → GPIO_SetBits` (CS high), then `mov r0,#0x700000; bl FUN_080069f4` — **this immediately IS the first R112 SPI write (0x700000 = reg 0x70, data 0x0000)**, i.e., `FUN_08002974` ends and falls straight into the register-init block with no separate call boundary in between (0x08002a02 is inline, not a return).
+
+Final pin map, confirmed by direct listing/decompile, no speculation:
+
+**RCC (0x40021000):**
+- `FUN_080052ec`: CR|=1(HSION); CFGR&=0xF8FF0000; CR&=0xFEF6FFFF; CR&=~0x40000(HSEBYP clr); CFGR&=~0x7f0000; CIR(+0x8)=0x9f0000(clear IT flags); calls PLL-enable; SCB->VTOR(0xE000ED08)=0x08000000.
+- `FUN_08004be4`(PLL enable): CR|=0x10000(HSEON)→poll CR&0x20000(HSERDY,timeout 0x500); FLASH_ACR(0x40022000)|=0x10(PRFTBE),&=~3,|=2(LATENCY=2WS); CFGR|=0x400(PPRE1 div2), CFGR&=~0x3f0000,|=0x1d0000 → PLLSRC=HSE,PLLXTPRE=not-divided,PLLMUL=x9; CR|=0x1000000(PLLON)→poll CR&0x2000000(PLLRDY); CFGR&=~3,|=2(SW=PLL)→poll CFGR&0xc==8(SWS=PLL).
+- Result: **HSE(8MHz)×9=72MHz SYSCLK, AHB=72MHz, APB1=36MHz(÷2), APB2=72MHz(÷1, no divide instruction seen), 2 flash wait-states.**
+- `FUN_08004584(mask,en)` = APB2ENR(+0x18) enable/disable helper. `FUN_08004564(mask,en)` = APB1ENR(+0x1c) helper (USBEN=0x40000 used).
+
+**GPIO clock enables:** APB2ENR|=0xC (IOPAEN+IOPBEN) issued 3 separate times (FUN_08002630, FUN_08002974, FUN_08006a6c uses `|=8` IOPAEN only). **GPIOC clock never enabled; GPIOC never referenced anywhere in the 64KiB image (verified: zero hits for 0x40011000 literal).**
+
+**Pin table (exact, from listing):**
+| Pin | Config site | Mode | Role |
+|---|---|---|---|
+| PB1 | FUN_08002974 @0x08002982 | Out PP 50MHz, set high then explicitly cleared low @0x080029f8 before reg-init starts | LMX CS/LE (matches established bit1=0x2) |
+| PB11 | FUN_08002974 (same Pin=0x1802 group), also FUN_08006a6c @0x08006aa2 sets it CNF=4(input floating) | Out PP in SPI-init; but re-configured input-floating in USB-init | LMX DATA (bit11=0x800) — **conflict**: USB init reconfigures PB11 as floating input, not preserved as SPI output |
+| PB12 | FUN_08002974 (Pin=0x1802 group) | Out PP 50MHz, set high @0x080029f0 | LMX CLK (bit12=0x1000) |
+| PB10 | FUN_08002974 @0x080029c6 sets input floating; FUN_08006a6c @0x08006a86 sets AF_PP 50MHz | conflicting configs across two call sites | Not part of LMX SPI bit-bang (bits used are 1/11/12 only); likely USB-related per FUN_08006a6c context but exact silicon USB pins are PA11/PA12 on STM32F103 — PB10/PB11 here are **not** USB D+/D-, so role unresolved by this analysis. Not guessing further. |
+| PA3 | FUN_08002974 @0x08002994 | Out PP 50MHz, set high then cleared low @0x080029e0 before reg-init | **Additional GPIO output, driven low right before the 114-register SPI block begins — candidate LMX CE/enable or LE-adjacent control pin, distinct from the 3 SPI lines.** No comment/label exists in binary confirming function; this is the "alternative fix point" candidate the gap asked for, flagged as unconfirmed purpose. |
+| PA0,PA1,PA2,PA8 | FUN_08002630 @0x0800263a | Input pull-up (mode byte 0x48) | Encoder + button inputs, read via FUN_0800266c/FUN_080024c8, consumed by FUN_080040a8 |
+| PB15 | FUN_08002630 @0x08002650 | Input pull-up | 5th button/encoder input (same mechanism) |
+| PA8 (again, redundant) | — | — | grouped in above mask 0x107 |
+
+**USB:** `FUN_08006a6c(0x2580)` enables RCC_APB1ENR bit 0x40000 (USBEN) and RCC_APB2ENR bit 8 (IOPAEN), then configures **GPIOB PB10 as AF push-pull and PB11 as floating input** — NOT the standard STM32F103 USB pins (PA11=D-, PA12=D+). No GPIOA pin 11/12 configuration found anywhere in the image (verified: only PA0,1,2,3,8 touched). **This firmware's actual USB D+/D- pin routing could not be confirmed from GPIO config alone — either it relies on default AF mapping without explicit GPIO_Init (unlikely for D+/D- which need explicit AF_PP), or the "USB init" label is my inference from register offsets and is not confirmed to be USB at all.** Stating this explicitly rather than guessing: **FUN_08006a6c's true peripheral identity (USB vs. something else at base 0x40004800) is not fully confirmed** — 0x40004800 doesn't match STM32F103's documented USB_FS base (0x40005C00) or CAN base (0x40006400), so the peripheral-base assumption needs the user's own datasheet cross-check, not further guessing from me.
+
+**No CE/output-enable pin to LMX confirmed with certainty** — PA3 is the only unexplained extra output line toggled immediately adjacent to the LMX register-init block and is the best candidate, but its actual destination (LMX pin vs. something else, e.g. LCD /CS) is not labeled anywhere in the binary and I did not trace PA3 forward to any documented LMX-EVAL pinout — that mapping would require the schematic, which I have not seen.

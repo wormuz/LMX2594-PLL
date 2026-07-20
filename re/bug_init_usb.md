@@ -1,0 +1,8 @@
+Findings reported above (5 total, most-severe first). Summary of investigation trail:
+
+- Verified via full vector-table dump (0x08000000-0x080000A0) that no NVIC IRQ is ever unmasked anywhere in the firmware (zero references to NVIC_ISER at 0xE000E100) — everything including USB and both UARTs is polled from the main loop, not interrupt-driven at the CPU level, despite USART3 explicitly setting RXNEIE (dead config, finding 4).
+- Traced the CLI command buffer (`_DAT_08006844`/flag `DAT_08006840`, both resolving to RAM 0x20001dd8) to USB-CDC handler writes at 0x08005b8e-0x08005bc4, not to USART3 — the "hardware UART command channel" referenced in the task brief feeds a debug/status printf path (0x08005580-0x08005600, `linecoding.*` strings), not the FUN_08006410 dispatcher. This corrects the task's premise and should be noted for any follow-on UART-channel reverse-engineering: the real CLI transport is USB-CDC.
+- Confirmed the known overheat bug's exact root cause: `FUN_08002270` (suspend) and `FUN_08003cc0` (resume), called from `FUN_08005224`/`FUN_08004838`, are pure state-variable/printf stubs with zero SPI/GPIO activity.
+- Found and confirmed a frequency-divider fallback bug in `FUN_08005f50` (0x08005f50): out-of-range-low frequency silently falls back to the undivided VCO path instead of erroring.
+- Found unchecked ASCII-digit parsing in the CLI dispatcher (`FUN_08006410`, 0x08006410) feeding raw SPI register writes with no range validation.
+- Found sweep start>stop only produces a text "ERROR" label without gating the sweep engine (0x08003480), flagged as PLAUSIBLE pending confirmation of the sweep-tick bound check.

@@ -1,0 +1,1025 @@
+[
+ {
+  "cluster": "boot_init",
+  "functions": [
+   {
+    "addr": "0x08000040",
+    "role": "startup trampoline: patches two bytes at [param_2+*(unaff_r4+param_3)], calls FUN_08000138 then FUN_080002a0, computes PC-relative jumptable pointer and tail-calls through it (Thumb PIC-style veneer, not vector table)",
+    "peripheral": "none",
+    "calls": "FUN_08000138, FUN_080002a0, indirect jumptable call"
+   },
+   {
+    "addr": "0x08000138",
+    "role": "same PC-relative indirect-jumptable veneer as FUN_08000040 (shared tail code, likely libc _start/exit-handler dispatch stub)",
+    "peripheral": "none",
+    "calls": "FUN_080002a0 (conditional), indirect jumptable call"
+   },
+   {
+    "addr": "0x080001ec",
+    "role": "vfprintf-style format-specifier converter: handles n/p/f/e/g/i/d/u/o/x/X/c/s/hex-float conversions, builds digit buffers, calls output char-emit callback via param_1[1]",
+    "peripheral": "none",
+    "calls": "FUN_080062a4, FUN_08000fbc, FUN_08000a9c, FUN_08000634, FUN_08000622, FUN_08000a10, FUN_080005d4, FUN_08000600, FUN_080007d4, FUN_08000646, FUN_08000fb4"
+   },
+   {
+    "addr": "0x0800027c",
+    "role": "libc reentrancy/errno-context setup: writes thread-local struct fields at iVar1+4 and +0xc from FUN_08006b78/FUN_08006b4c",
+    "peripheral": "none",
+    "calls": "FUN_08000fb4, FUN_08006b78, FUN_08006b4c"
+   },
+   {
+    "addr": "0x0800029c",
+    "role": "empty stub / no-op (likely weak default handler or placeholder)",
+    "peripheral": "none",
+    "calls": "none"
+   },
+   {
+    "addr": "0x080002a0",
+    "role": "libc init/exit chain: fetches context, calls reentrancy setup, __libc_init/fini style dispatch, ends with two indirect calls through DAT_080002e8/DAT_080002ec (function-pointer tables, likely atexit/fini array), NOT vector-table related",
+    "peripheral": "none",
+    "calls": "FUN_08000f58, FUN_0800027c, FUN_08006410, FUN_08001120, FUN_0800029c, FUN_080062da, (*DAT_080002e8)(), (*DAT_080002ec)()"
+   },
+   {
+    "addr": "0x080002dc",
+    "role": "trivial accessor returning packed 64-bit constant from DAT_080002f0/f4 (likely __dso_handle or similar libc global pair)",
+    "peripheral": "none",
+    "calls": "none"
+   },
+   {
+    "addr": "0x08000304",
+    "role": "printf/sprintf wrapper: builds local struct on stack, calls core formatter FUN_0800077e then cleanup FUN_080007a4 (this is vsnprintf-like entry, part of libc, not device init)",
+    "peripheral": "none",
+    "calls": "FUN_0800077e, FUN_080007a4"
+   },
+   {
+    "addr": "0x08000328",
+    "role": "variadic wrapper forwarding param_1 + stacked args to FUN_080007b0 (printf-family entry point)",
+    "peripheral": "none",
+    "calls": "FUN_080007b0"
+   },
+   {
+    "addr": "0x080003b8",
+    "role": "core format-string scanner (vfprintf engine): parses %-flags/width/precision/length-modifiers, dispatches conversion via FUN_080001ec, emits literal chars via param_1[1] callback",
+    "peripheral": "none",
+    "calls": "FUN_080062cc, FUN_080001ec"
+   },
+   {
+    "addr": "0x08000540",
+    "role": "strlen-like fast scanner using word-at-a-time NUL detection (Bit Twiddling Hacks trick, 0xfefefeff/0x80808080 masks) — classic newlib strlen",
+    "peripheral": "none",
+    "calls": "none"
+   },
+   {
+    "addr": "0x0800057e",
+    "role": "bzero/memset-style bulk zero-fill helper, unrolled 32/16/8/4/2/1-byte loop, used by libc buffer init",
+    "peripheral": "none",
+    "calls": "none"
+   },
+   {
+    "addr": "0x080005d4",
+    "role": "printf padding emitter: writes N space/zero-fill chars via param_1[1] output callback, part of vfprintf field-width padding",
+    "peripheral": "none",
+    "calls": "indirect call through param_1[1]"
+   },
+   {
+    "addr": "0x08000600",
+    "role": "printf trailing-padding emitter (mirror of FUN_080005d4), writes spaces via callback at param_1+4",
+    "peripheral": "none",
+    "calls": "indirect call through *(param_1+4)"
+   },
+   {
+    "addr": "0x08000622",
+    "role": "integer sign/width truncation helper (char/short/int cast based on flag bits in *param_2) used by printf %d/%i path",
+    "peripheral": "none",
+    "calls": "none"
+   },
+   {
+    "addr": "0x08000634",
+    "role": "integer unsigned width truncation helper (mask to 8/16/32 bits) used by printf %u/%o/%x path",
+    "peripheral": "none",
+    "calls": "none"
+   },
+   {
+    "addr": "0x08000646",
+    "role": "string output helper for %s/%c: computes length (strnlen-like), updates remaining-width/char-count fields at param_1+0x18/+0x20, emits each byte via callback at param_1+4, wrapped with padding calls",
+    "peripheral": "none",
+    "calls": "FUN_080005d4, FUN_08000600, indirect call through *(param_1+4)"
+   }
+  ]
+ },
+ {
+  "cluster": "usb_core",
+  "functions": [
+   {
+    "addr": "0x08000646",
+    "role": "stream putc-string writer: writes param_2 buffer byte-by-byte via vtable fn ptr at param_1+4 (stdio-like FILE stream)",
+    "peripheral": "none",
+    "calls": "FUN_080005d4, FUN_08000600"
+   },
+   {
+    "addr": "0x0800077e",
+    "role": "stack-frame setup wrapper, builds local struct then calls formatter",
+    "peripheral": "none",
+    "calls": "FUN_080003b8"
+   },
+   {
+    "addr": "0x080007a4",
+    "role": "trivial putc: *buf++ = char (buffer pointer output primitive)",
+    "peripheral": "none",
+    "calls": "none"
+   },
+   {
+    "addr": "0x080007b0",
+    "role": "wrapper: calls 077e then checks FUN_08000f10 result, returns -1 on error else passthrough",
+    "peripheral": "none",
+    "calls": "FUN_0800077e, FUN_08000f10"
+   },
+   {
+    "addr": "0x080007d4",
+    "role": "format-string scanner/dispatcher: iterates wide-char format string calling FUN_08000f18 per char, stream output via vtable fn ptr at param_1+4 (this is vfprintf/vfwprintf core loop)",
+    "peripheral": "none",
+    "calls": "FUN_08000f18, FUN_080005d4, FUN_08000600"
+   },
+   {
+    "addr": "0x08000a10",
+    "role": "64-bit unsigned division/reciprocal helper (division by 10 constant, used in decimal conversion) - pure arithmetic, no side effects",
+    "peripheral": "none",
+    "calls": "none"
+   },
+   {
+    "addr": "0x08000a9c",
+    "role": "double-to-decimal-string conversion (dtoa-style): converts float param_3 struct into ASCII digits into param_2 buffer, handles exponent/rounding",
+    "peripheral": "none",
+    "calls": "FUN_0800103c, FUN_080011bc, FUN_080016de, FUN_080016b4, FUN_08000a10"
+   },
+   {
+    "addr": "0x08000f18",
+    "role": "per-char classifier/putchar dispatch: checks *(iVar3+0x101) flag, either calls indirect jumptable handler or does ctype-like table lookup (isprint/isxxx style table at iVar3+param_2)",
+    "peripheral": "none",
+    "calls": "FUN_08000fa4 (indirect jumptable call, not resolved by Ghidra)"
+   },
+   {
+    "addr": "0x08000f58",
+    "role": "exception/fault-frame handler: reads unaff_lr, zeroes a 16-word (64 byte) struct at derived address - looks like Cortex-M3 fault/stack-frame clearing, NOT USB specific",
+    "peripheral": "none",
+    "calls": "FUN_08001134, FUN_080002dc"
+   },
+   {
+    "addr": "0x08000fa4",
+    "role": "trivial accessor: returns FUN_08000fb4()+4 (pointer+offset helper)",
+    "peripheral": "none",
+    "calls": "FUN_08000fb4"
+   },
+   {
+    "addr": "0x08000fb4",
+    "role": "trivial global read: returns DAT_08000fb8 (some global table base pointer)",
+    "peripheral": "none",
+    "calls": "none"
+   },
+   {
+    "addr": "0x08000fbc",
+    "role": "stream terminator/CRLF emitter: writes 3-4 literal bytes (from string table at 0x8001030/34/38/2c, likely CR/LF or error-code strings) through vtable fn ptr param_1+4; adjusts param_1[6]/[8] counters",
+    "peripheral": "none",
+    "calls": "FUN_080005d4, FUN_08000600"
+   },
+   {
+    "addr": "0x0800103c",
+    "role": "big-number/decimal exponent table lookup + multiply-accumulate loop for float-to-decimal conversion (bignum scaling, part of dtoa), reads constant tables at DAT_0800111c-relative offsets",
+    "peripheral": "none",
+    "calls": "FUN_080016de, FUN_080016b4"
+   },
+   {
+    "addr": "0x08001120",
+    "role": "generic trampoline/cleanup stub: calls two setup funcs then two indirect function pointers via DAT_080002e8/DAT_080002ec (possibly atexit/init-fini table, or libc _exit-style teardown) - NOT related to USB suspend/0x20001ED0",
+    "peripheral": "none",
+    "calls": "FUN_0800029c, FUN_080062da, indirect calls via DAT_080002e8, DAT_080002ec"
+   }
+  ]
+ },
+ {
+  "cluster": "usb_cdc",
+  "functions": [
+   {
+    "addr": "0x08001120",
+    "role": "trampoline/wrapper calling FUN_0800029c + FUN_080062da then indirect jumptable call via DAT_080002e8/DAT_080002ec (not USB-specific, likely libc init)",
+    "peripheral": "none",
+    "calls": "FUN_0800029c, FUN_080062da, indirect(DAT_080002e8/ec)"
+   },
+   {
+    "addr": "0x08001134",
+    "role": "trivial accessor returning DAT_08001138 (constant/global read)",
+    "peripheral": "none"
+   },
+   {
+    "addr": "0x0800113c",
+    "role": "libgcc-style memcmp (word-wise compare with SWAR zero-byte trick)",
+    "peripheral": "none"
+   },
+   {
+    "addr": "0x080011bc",
+    "role": "soft-float helper, likely __floatsidf/__floatunsidf (int-to-double conversion) or similar bit-manipulation float routine",
+    "peripheral": "none"
+   },
+   {
+    "addr": "0x080012a0",
+    "role": "64-bit float multiply helper (__muldf3-style), heavy mantissa multiply/normalize logic",
+    "peripheral": "none"
+   },
+   {
+    "addr": "0x080015d8",
+    "role": "double shift/rounding helper used by float multiply/divide routines (part of soft-float lib)",
+    "peripheral": "none",
+    "calls": "none, tail of FUN_080016b4/080016de"
+   },
+   {
+    "addr": "0x080016b4",
+    "role": "double compare wrapper: checks sign/exponent bits then calls FUN_080012a0 (mul) then FUN_080015d8",
+    "peripheral": "none",
+    "calls": "FUN_080012a0, FUN_080015d8"
+   },
+   {
+    "addr": "0x080016de",
+    "role": "double compare wrapper: checks NaN-ish bit 0x40000000 then calls FUN_08001708 (div) then FUN_080015d8",
+    "peripheral": "none",
+    "calls": "FUN_08001708, FUN_080015d8"
+   },
+   {
+    "addr": "0x08001708",
+    "role": "64-bit float divide helper (__divdf3-style), long-division mantissa arithmetic",
+    "peripheral": "none"
+   },
+   {
+    "addr": "0x0800194c",
+    "role": "LCD command sender: writes 0x2a/0x2b/0x2c (column/page address set) via FUN_08002914 (cmd) and FUN_080028f8 (data byte) - display driver, not USB",
+    "peripheral": "none (LCD via bit-bang, calls elsewhere define GPIO)",
+    "calls": "FUN_08002914, FUN_080028f8"
+   },
+   {
+    "addr": "0x080019aa",
+    "role": "16-bit byte-swap helper (endian conversion utility)",
+    "peripheral": "none"
+   },
+   {
+    "addr": "0x080019b8",
+    "role": "USB endpoint dispatch core: reads EP status reg via DAT_08001c28[0x11] (USB EP_nR array, base offset +0xc00 pattern = USB peripheral SRAM/EP table at 0x40005c00 region), clears CTR_RX/CTR_TX bits (masks 0x8f0f/0x8f0f, 0x4000/0x40 style STM32 USB EPnR toggle-clear), dispatches to per-EP RX/TX callback tables DAT_08001c38 (RX cb[]) and DAT_08001c3c (TX cb[]), falls through to CTR handling for EP0 (calls FUN_08002580/FUN_08004cd8/FUN_08004460 = EP0 setup/in/out handlers)",
+    "peripheral": "USB (0x40005c00 EPnR array via pointer, offset +0xc00 constant matches USB_EPnR base)",
+    "calls": "FUN_08002580, FUN_08004cd8, FUN_08004460 (indirect via DAT_08001c38/3c tables)"
+   },
+   {
+    "addr": "0x08001c40",
+    "role": "USB EP TX callback stub: if EP has CTR_TX pending (bit 0x4000) clears CTR_TX/DTOG bits and sets STAT_TX to NAK/VALID pattern (0xc080) - generic 'EP transmit complete' handler for one endpoint slot",
+    "peripheral": "USB (EPnR reg at DAT_08001c70+idx*4+0xc00)"
+   },
+   {
+    "addr": "0x08001c74",
+    "role": "USB EP RX callback stub: mirrors 0x08001c40 for CTR_RX bit 0x40, sets STAT_RX pattern (0x80c0)",
+    "peripheral": "USB (EPnR reg at DAT_08001ca4+idx*4+0xc00)"
+   },
+   {
+    "addr": "0x08001ca8",
+    "role": "USB CDC line-coding request handler: builds 28-byte struct on stack (FUN_0800057e = memset/init), validates via FUN_080024c8(...,0x100)/FUN_080024c8(...,1) then copies 14 bytes (0xe) into linecoding buffer via FUN_080048b4 - handles SET_LINE_CODING/GET_LINE_CODING class request",
+    "peripheral": "USB (indirectly, no direct reg literal in this func - operates on CDC line-coding struct)",
+    "calls": "FUN_0800057e, FUN_080024c8, FUN_080048b4"
+   },
+   {
+    "addr": "0x08001d08",
+    "role": "USB CDC EP TX data-pump: reads endpoint object (DAT_08001db0), if pending TX count 0 and state==4 primes new packet or sets state 7/idle (0x10/0x30 status codes); else copies min(count,mtu) bytes via EP's user TX callback (offset+0x18 function ptr) then FUN_08005c0c (memcpy) and FUN_08004b28 (buffer advance) - core CDC bulk-IN send state machine",
+    "peripheral": "none direct, drives USB via EP object function pointers",
+    "calls": "FUN_08002528, FUN_08005c0c, FUN_08004b28"
+   },
+   {
+    "addr": "0x08001dc8",
+    "role": "USB CDC EP RX data-pump: symmetric to 0x08001d08 for bulk-OUT receive, calls EP RX callback (offset+0x18), FUN_080024e4, FUN_080044b0 (copy into user buffer), updates EP state 3/5/6 based on remaining count vs MTU",
+    "peripheral": "none direct (EP object based)",
+    "calls": "FUN_080024e4, FUN_080044b0, FUN_08004b28"
+   },
+   {
+    "addr": "0x08001e84",
+    "role": "USB CDC control-endpoint (EP0) class-request state machine: large dispatcher decoding setup packet fields (bmRequestType/bRequest at *DAT_080020f8 offsets), routes SET_LINE_CODING(1)/GET_LINE_CODING(2)/SEND_BREAK(3) etc to handler function pointers from class-driver vtable (*DAT_080020fc+0x1c/0x20/0x24), also handles GET_STATUS/CLEAR_FEATURE style EP-halt query via EPnR at DAT_08002104+idx*4+0xc00 (STAT bits 0x3000/0x30 = STALL check), ends by possibly invoking FUN_08001d08 to continue data stage",
+    "peripheral": "USB (EPnR array via DAT_08002104 base, +0xc00 offset pattern)",
+    "calls": "indirect via DAT_080020fc vtable (+0x18/0x1c/0x20/0x24), FUN_08001d08"
+   }
+  ]
+ },
+ {
+  "cluster": "power_susp",
+  "functions": [
+   {
+    "addr": "0x08001e84",
+    "role": "USB endpoint/setup packet dispatcher: decodes control request (bmRequestType/bRequest at DAT_080020f8), routes to class/vendor/standard handlers via function-pointer table (offsets 0x1c/0x20/0x24 from DAT_080020fc), sets EP0 state (0x08/0x09/0x03 status codes)",
+    "peripheral": "USB",
+    "calls": "FUN_08001d08, indirect via DAT_080020fc vtable"
+   },
+   {
+    "addr": "0x08002120",
+    "role": "USB CDC ring-buffer TX pump: computes free space in circular buffer at DAT_080021ac+0x400/0x402, caps chunk to 0x40 bytes, copies via FUN_08005c0c then kicks EP1 IN transfer",
+    "peripheral": "USB (buffer, not register)",
+    "calls": "FUN_08005c0c, FUN_08004b28, FUN_08004b84"
+   },
+   {
+    "addr": "0x080021d0",
+    "role": "trivial setter: stores param_1 into *DAT_080021d8 (likely endpoint callback/context pointer)",
+    "peripheral": "none (RAM ptr)",
+    "calls": "none"
+   },
+   {
+    "addr": "0x080021dc",
+    "role": "USB endpoint status-register bitmask updater: clears/sets bits in a 4-word EP control struct at DAT_0800226c based on toggle/type byte in param_1 (STM32 USB EPnR-style read-modify-write emulation, toggle bits at offsets 5/6)",
+    "peripheral": "USB (EPnR-style struct)",
+    "calls": "none"
+   },
+   {
+    "addr": "0x08002270",
+    "role": "USB SUSPEND CALLBACK: prints \"usb enter low power mode\" string, writes 3 to *DAT_0800229c (state var; needs xref check to confirm it is 0x20001ED0). NO SPI1/SPI2 access, NO GPIO write, NO call to any LMX2594 powerdown routine anywhere in this function.",
+    "peripheral": "none touched (string+state only)",
+    "calls": "FUN_08000328 (print/log)"
+   },
+   {
+    "addr": "0x080022a0",
+    "role": "USB endpoint stall/set-feature helper: polls FUN_0800238c(0xb0000) for ready state 4, sets bits 0x40/0x2 in status reg at DAT_080022e8+0x10, stores param_1 at +0x14, re-polls, clears bits",
+    "peripheral": "USB ctrl reg (DAT_080022e8 struct)",
+    "calls": "FUN_0800238c (poll/wait state machine)"
+   },
+   {
+    "addr": "0x080022ec",
+    "role": "USB bus-state classifier: reads status word at DAT_0800231c+0xc, decodes bits 1/4/0x10 into state codes 1-4 (reset/suspend/resume/ready)",
+    "peripheral": "USB status struct",
+    "calls": "none"
+   },
+   {
+    "addr": "0x08002320",
+    "role": "sets bit 0x80 in reg at DAT_08002330+0x10 (arm/enable flag)",
+    "peripheral": "USB ctrl reg",
+    "calls": "none"
+   },
+   {
+    "addr": "0x08002334",
+    "role": "USB endpoint data-write helper: polls FUN_0800238c(0x2000) for state 4, sets bit1 in DAT_08002370+0x10, writes param_2 to *param_1, re-polls, clears bit",
+    "peripheral": "USB ctrl reg",
+    "calls": "FUN_0800238c"
+   },
+   {
+    "addr": "0x08002374",
+    "role": "copies two DAT_ constants into fields +4 of two structs at DAT_08002384/DAT_08002388 (descriptor/endpoint config init)",
+    "peripheral": "none direct (RAM struct init)",
+    "calls": "none"
+   },
+   {
+    "addr": "0x0800238c",
+    "role": "busy-wait/poll wrapper around FUN_080022ec: loops while state==1 (busy) with countdown, returns 5 on timeout — generic USB register-ready poll used by 0x080022a0 and 0x08002334",
+    "peripheral": "USB status struct (indirect)",
+    "calls": "FUN_080022ec"
+   },
+   {
+    "addr": "0x080023b2",
+    "role": "USB endpoint-type/config bitfield packer: builds 4-nibble config word from bitmask param_2, special-cases ISO ('(' =0x28) and bulk/interrupt ('H'=0x48) endpoint types — descriptor/endpoint-config table builder",
+    "peripheral": "none direct (table build)",
+    "calls": "none"
+   },
+   {
+    "addr": "0x080024c8",
+    "role": "bit-test helper: returns nonzero if (*(param_1+8) & param_2) set — generic flag-check accessor",
+    "peripheral": "none",
+    "calls": "none"
+   },
+   {
+    "addr": "0x080024da",
+    "role": "trivial setter: *(param_1+0x14)=param_2",
+    "peripheral": "none",
+    "calls": "none"
+   },
+   {
+    "addr": "0x080024de",
+    "role": "trivial setter: *(param_1+0x10)=param_2",
+    "peripheral": "none",
+    "calls": "none"
+   },
+   {
+    "addr": "0x080024e4",
+    "role": "table lookup: returns 16-bit value from DAT_08002500 array indexed by (*DAT_080024fc & 0xffff)+param_1*8+4 — endpoint descriptor table accessor",
+    "peripheral": "none direct",
+    "calls": "none"
+   }
+  ]
+ },
+ {
+  "cluster": "lmx_spi",
+  "functions": [
+   {
+    "addr": "0x080024e4",
+    "role": "font lookup: returns 16-bit glyph row from font table indexed by char code (param_1*8+4)",
+    "peripheral": "none",
+    "calls": "none (pure table read)"
+   },
+   {
+    "addr": "0x08002528",
+    "role": "font lookup variant: returns 16-bit glyph row, different table/offset (param_1*8)",
+    "peripheral": "none",
+    "calls": "none"
+   },
+   {
+    "addr": "0x08002580",
+    "role": "USB/serial-like state machine dispatcher on cmd byte at *DAT_080025e4 (values 2/4/6); calls FUN_08001d08, FUN_080049d4, vtable call via DAT_080025e8+0x20 and DAT_080025ec+8; likely USB control-transfer handler, NOT USB suspend callback (different from FUN_08002270)",
+    "peripheral": "none directly (indirect via function pointers, possibly USB)",
+    "calls": "FUN_08001d08, FUN_080049d4, FUN_080044dc, indirect calls via vtables"
+   },
+   {
+    "addr": "0x08002630",
+    "role": "GPIOB CRL/CRH pin config: sets mode=0x107(and 0x48)+0x8000 via FUN_080023b2 helper, likely LCD control pin setup",
+    "peripheral": "GPIOB (0x40010c00) via FUN_080023b2",
+    "calls": "FUN_08004584, FUN_080023b2"
+   },
+   {
+    "addr": "0x0800266c",
+    "role": "USB endpoint/state re-init/check routine: tests/sets flag *DAT_08002754, calls FUN_080024c8 with masks 0x100/2/1/4/0x8000 repeatedly (endpoint status bits), calls FUN_080063a8(10) delay; returns error code 1-5 on which check failed",
+    "peripheral": "none directly (values suggest USB endpoint register masks via DAT_08002758/0800275c, not resolved to USB base here)",
+    "calls": "FUN_080024c8, FUN_080063a8"
+   },
+   {
+    "addr": "0x08002760",
+    "role": "LCD full-screen clear/fill: sets color 0xef via FUN_0800194c then loops 240x240 calling FUN_080028d4 (pixel-write)",
+    "peripheral": "none direct (delegates to GPIOB bit-bang via FUN_080028d4)",
+    "calls": "FUN_0800194c, FUN_080028d4"
+   },
+   {
+    "addr": "0x0800278c",
+    "role": "LCD single-pixel plot: set window via FUN_0800194c then write color word via FUN_080028d4",
+    "peripheral": "none direct",
+    "calls": "FUN_0800194c, FUN_080028d4"
+   },
+   {
+    "addr": "0x080027ac",
+    "role": "LCD text string renderer: iterates chars, wraps X/Y, clears via FUN_08002760 on overflow, calls FUN_080027f0 per glyph",
+    "peripheral": "none direct",
+    "calls": "FUN_080027f0, FUN_08002760"
+   },
+   {
+    "addr": "0x080027f0",
+    "role": "LCD glyph blit: reads font bitmap rows from DAT_080028cc table, either bit-bangs pixel color words via FUN_080028d4 (fill mode) or plots individual pixels via FUN_0800278c (outline mode)",
+    "peripheral": "none direct (delegates to GPIOB bit-bang)",
+    "calls": "FUN_0800194c, FUN_080028d4, FUN_0800278c"
+   },
+   {
+    "addr": "0x080028d4",
+    "role": "LCD 16-bit color/data write: selects GPIOB CRH reg (DAT_080028f4=0x100 offset), sends high then low byte via FUN_08002930 bit-bang",
+    "peripheral": "GPIOB (0x40010c00)",
+    "calls": "FUN_080024de, FUN_08002930"
+   },
+   {
+    "addr": "0x080028f8",
+    "role": "LCD command/data-select write, single byte, GPIOB CRH offset 0x100",
+    "peripheral": "GPIOB (0x40010c00)",
+    "calls": "FUN_080024de, FUN_08002930"
+   },
+   {
+    "addr": "0x08002914",
+    "role": "LCD command write via GPIOB CRL (DAT_0800292c), single byte",
+    "peripheral": "GPIOB (0x40010c00)",
+    "calls": "FUN_080024da, FUN_08002930"
+   },
+   {
+    "addr": "0x08002930",
+    "role": "CONFIRMED: GPIOB bit-bang serial-out primitive - toggles GPIOB pins (base 0x40010c00, literal at 0x08002970) as clock+data for each of 8 bits; this is the LCD SPI-like interface, NOT LMX2594 SPI1/SPI2",
+    "peripheral": "GPIOB (0x40010c00) - literal pool confirmed via listing",
+    "calls": "FUN_080024da, FUN_080024de (both simple field-store helpers on GPIOB struct)"
+   },
+   {
+    "addr": "0x08002974",
+    "role": "LCD init sequence: configures GPIOB CRL/CRH pin modes then sends ~110 command bytes via FUN_080069f4 (likely ILI9163/ST7735-style controller init table for command/data GPIO write)",
+    "peripheral": "GPIOB (0x40010c00)",
+    "calls": "FUN_08004584, FUN_080023b2, FUN_080024da, FUN_080024de, FUN_080069f4 (x~110, LCD init command stream)"
+   },
+   {
+    "addr": "0x08002e0c",
+    "role": "LCD splash/menu screen draw: prints 'LMX2594-EVAL','Rang 20M-15.5GHz','Step:1KHz','Version 1.0' then clears and prints F1/F2/St/M:Start/OUTPOWER labels",
+    "peripheral": "none direct",
+    "calls": "FUN_080027ac, FUN_080063a8 (delay), FUN_08002760"
+   },
+   {
+    "addr": "0x08002f4c",
+    "role": "format uint param_1 as decimal string (division by DAT_080030f8/DAT_08003100/DAT_08003104 constants ~10^7,10^5,10^4) and render at row0 (F1 field) via FUN_080027ac - this is the frequency display formatter, not the SPI write itself",
+    "peripheral": "none direct",
+    "calls": "FUN_080027ac"
+   },
+   {
+    "addr": "0x08003108",
+    "role": "same decimal formatter as 0x08002f4c but for F2 field (row 0x28)",
+    "peripheral": "none direct",
+    "calls": "FUN_080027ac"
+   },
+   {
+    "addr": "0x080032c4",
+    "role": "same decimal formatter, for St (step) field (row 0x50)",
+    "peripheral": "none direct",
+    "calls": "FUN_080027ac"
+   },
+   {
+    "addr": "0x08003480",
+    "role": "sweep-status display: formats F1/F2/step values plus sweep speed/repeat params, sets STOP/RUN/ERROR/SPOT status text, calls FUN_080053ce(0x40000000,mode) which is a TIMx (0x40000000 base = TIM2) start/stop control for the sweep timer, and FUN_080054c0 for period; renders all fields via FUN_080027ac. No LMX2594 SPI register writes present",
+    "peripheral": "TIM2 (0x40000000) via FUN_080053ce/FUN_080054c0",
+    "calls": "FUN_080053ce, FUN_080054c0, FUN_080027ac, FUN_08005f50"
+   }
+  ]
+ },
+ {
+  "cluster": "freq_lcd",
+  "functions": [
+   {
+    "addr": "0x08003480",
+    "role": "Format F1/F2/step/power values to LCD digit buffers, print STOP/RUN/ERROR/SPOT status, calls timer/beeper and refresh",
+    "peripheral": "none (calls FUN_080053ce(0x40000000,..) = TIMx base)",
+    "calls": "FUN_080053ce,FUN_080054c0,FUN_080027ac,FUN_08005f50"
+   },
+   {
+    "addr": "0x08003af4",
+    "role": "Format 2-digit value (likely sweep step count) into LCD line buffer",
+    "peripheral": "none",
+    "calls": "FUN_080027ac"
+   },
+   {
+    "addr": "0x08003b3c",
+    "role": "Same STOP/RUN/ERROR/SPOT status renderer as FUN_08003480 variant, drives TIMx enable/beep",
+    "peripheral": "none (TIMx via FUN_080053ce(0x40000000,..))",
+    "calls": "FUN_080053ce,FUN_080054c0,FUN_08005f50"
+   },
+   {
+    "addr": "0x08003c28",
+    "role": "Format 4-digit numeric value into LCD text field",
+    "peripheral": "none",
+    "calls": "FUN_080027ac"
+   },
+   {
+    "addr": "0x08003cc0",
+    "role": "USB 'leave low power mode' string print + sets flag at DAT_08003cfc (unrelated 0x20001ED0? not confirmed here) based on config byte",
+    "peripheral": "none (string/UART-LCD print)",
+    "calls": "FUN_08000328"
+   },
+   {
+    "addr": "0x08003d08",
+    "role": "Bitmask/register field packer, writes computed bitmask to a fixed low address (looks like NVIC/EXTI style register calc, not GPIO base seen)",
+    "peripheral": "unclear - writes to -0x1fff1f00 offset (0xE0002100 range, SysTick/NVIC-like), not GPIOx/SPI/RCC base",
+    "calls": "none"
+   },
+   {
+    "addr": "0x08003d78",
+    "role": "OR-in bits helper: *DAT = DAT | param (generic register set-bit utility)",
+    "peripheral": "none (target address unresolved, no SPI/GPIO base literal)",
+    "calls": "none"
+   },
+   {
+    "addr": "0x08003d8c",
+    "role": "USB control-transfer SETUP packet dispatcher (bRequest/bmRequestType switch), routes to class/vendor handlers, sets stall/ack status byte",
+    "peripheral": "USB (endpoint-buffer struct via DAT_08003eb0, not raw 0x40005c00 in this decompile)",
+    "calls": "FUN_08005078,FUN_080050c0,FUN_08004d90,FUN_080051b8,FUN_080050e8"
+   },
+   {
+    "addr": "0x08003ec4",
+    "role": "LCD controller init: writes ~60 command/data byte pairs (gamma/driver config) via command-strobe helper functions, includes GPIO config write 0x100301e0 to a config register and delay calls",
+    "peripheral": "LCD control lines (GPIO, exact port not in literal pool of this func - resolved via DAT_080040a4)",
+    "calls": "FUN_08004584,FUN_080023b2,FUN_080024de,FUN_080024da,FUN_080063a8,FUN_08002914,FUN_080028f8"
+   },
+   {
+    "addr": "0x080040a8",
+    "role": "Sweep/menu button state machine: reads button code (FUN_0800266c), adjusts F1/F2/step/power fields with clamping, calls formatters/renderers and DAC-like output; case 3/1 cycle field selection, case 2/4 increment/decrement selected field",
+    "peripheral": "none direct (delegates to FUN_08002f4c/FUN_08003108/FUN_080032c4/FUN_08003c28/FUN_08003af4 formatters, FUN_08005f50 display update)",
+    "calls": "FUN_0800266c,FUN_08062e0,FUN_08002f4c,FUN_08003108,FUN_080032c4,FUN_08003c28,FUN_08003af4,FUN_08005f50,FUN_08003b3c,FUN_08005ec4,FUN_0800690c"
+   },
+   {
+    "addr": "0x08004460",
+    "role": "USB class-request completion handler: dispatches on status byte (2/4=stall, 3/5=call FUN_08001dc8 handler, 7=vtable callback), no SPI/power writes",
+    "peripheral": "USB (endpoint struct DAT_080044a8/ac)",
+    "calls": "FUN_08001dc8,FUN_080044dc"
+   }
+  ]
+ },
+ {
+  "cluster": "drivers",
+  "functions": [
+   {
+    "addr": "08004460",
+    "role": "USB EP0 setup dispatch: reads EP0 state byte, on states 2/4 sets ready, 3/5 calls FUN_08001dc8 (EP handler), 7 calls vtable+0xc, else default; then calls FUN_080044dc",
+    "peripheral": "USB",
+    "calls": "FUN_08001dc8, FUN_080044dc, vtable(DAT_080044ac+0xc)"
+   },
+   {
+    "addr": "080044b0",
+    "role": "copy param_3+1>>1 words from ROM table DAT_080044d4+param_2*2 into buffer (descriptor fetch, stride 2 words)",
+    "peripheral": "none (flash table read)"
+   },
+   {
+    "addr": "080044dc",
+    "role": "USB control-transfer size setup: calls FUN_08004a48(0,ep_cfg), if state==8 sets *DAT_0800451c=0x1000,*DAT_08004520=0x10 (buffer size regs); returns state==9",
+    "peripheral": "USB",
+    "calls": "FUN_08004a48"
+   },
+   {
+    "addr": "08004564",
+    "role": "RCC register bit set/clear at DAT_08004580+0x1c (RCC base 0x40021000, offset 0x1c = RCC_APB2ENR) - enables/disables APB2 peripheral clock bitmask param_1",
+    "peripheral": "RCC (0x40021000)"
+   },
+   {
+    "addr": "08004584",
+    "role": "RCC register bit set/clear at DAT_080045a0+0x18 (RCC_APB1ENR, offset 0x18) - enables/disables APB1 peripheral clock bitmask param_1",
+    "peripheral": "RCC (0x40021000)"
+   },
+   {
+    "addr": "080045a4",
+    "role": "Compute derived clock rates (SYSCLK/HCLK/PCLK1/PCLK2/ADCCLK) from RCC_CFGR bits (DAT_08004664+4) using prescaler lookup tables DAT_08004668/6c/70/74 - clock config helper",
+    "peripheral": "RCC (0x40021000)"
+   },
+   {
+    "addr": "08004678",
+    "role": "store param_1 to *DAT_08004680 (single global write, likely USB device address or state var)",
+    "peripheral": "none/USB related"
+   },
+   {
+    "addr": "08004684",
+    "role": "reads 0x1c bytes via FUN_0800057e (likely unique-ID/option bytes region), unpacks 14 raw bytes via FUN_0800488c into device serial/config fields at DAT_08004754.._64; error path FUN_08005ec4 if 0xFF sentinel found",
+    "peripheral": "none (flash/option bytes read)",
+    "calls": "FUN_0800057e, FUN_0800488c, FUN_08005ec4"
+   },
+   {
+    "addr": "08004768",
+    "role": "USB device state machine (states 0-6): manages enumeration/address-set sequence, calls FUN_08004838 (assumed pull-up/reset), sets/clears bit 0x10 in *DAT_08004834 (USB CNTR-like register)",
+    "peripheral": "USB (0x40005c00 likely, via DAT_08004834)",
+    "calls": "FUN_08004838"
+   },
+   {
+    "addr": "08004838",
+    "role": "USB reset/pull-up sequencing: clears bit2(0x4) then calls FUN_08003cc0 (delay) then writes 0xbf00 to *DAT_08004858 (USB CNTR register - reset/powerdown bits)",
+    "peripheral": "USB (0x40005c00)",
+    "calls": "FUN_08003cc0"
+   },
+   {
+    "addr": "0800485c",
+    "role": "counts to 5 then zeroes *DAT_08004888 and calls FUN_08002120 (likely USB address-latch or LED/status trigger)",
+    "peripheral": "none/counter",
+    "calls": "FUN_08002120"
+   },
+   {
+    "addr": "0800488c",
+    "role": "generic word-copy loop wrapper calling FUN_080048ae per element (uses extraout regs - Ghidra decompile artifact of a hardware-pointer-increment idiom, likely flash-word read loop)",
+    "peripheral": "none",
+    "calls": "FUN_080048ae"
+   },
+   {
+    "addr": "080048ae",
+    "role": "dereference/read single undefined2 at param_1 (flash word read primitive)",
+    "peripheral": "none"
+   },
+   {
+    "addr": "080048b4",
+    "role": "Flash sector-buffered rewrite: for addr in flash range (checks vs DAT_08004994), does read-modify-erase-write via FUN_08002374 (unlock), FUN_080022a0 (erase page), FUN_0800499c (program halfwords), FUN_08002320 (lock) - flash driver, not SPI",
+    "peripheral": "FLASH (0x08000000 self-modify region)",
+    "calls": "FUN_08002374, FUN_080022a0, FUN_0800499c, FUN_08002320, FUN_0800488c"
+   },
+   {
+    "addr": "0800499c",
+    "role": "program halfwords into flash one at a time via FUN_08002334 (flash word program primitive)",
+    "peripheral": "FLASH",
+    "calls": "FUN_08002334"
+   },
+   {
+    "addr": "080049d4",
+    "role": "USB endpoint table init loop: writes EPnR registers at DAT_08004a1c+0xc00 offset region (USB BTABLE/EPnR, offset 0xc00 = USB packet buffer/EP register block), sets STAT bits 0x8080, then sets *DAT_08004a20=param_1|0x80 (device address+enable)",
+    "peripheral": "USB (0x40005c00, EPnR array)"
+   },
+   {
+    "addr": "08004a48",
+    "role": "set USB endpoint buffer-descriptor COUNT field (TX or RX, BL_SIZE bit 0x8000 for >=64 byte blocks) at BTABLE-relative offset",
+    "peripheral": "USB (BTABLE in SRAM/PMA, base DAT_08004a90)"
+   },
+   {
+    "addr": "08004b28",
+    "role": "write USB endpoint buffer-descriptor ADDR field at BTABLE offset",
+    "peripheral": "USB (PMA)"
+   },
+   {
+    "addr": "08004b44",
+    "role": "toggle USB EPnR STAT_RX/STAT_TX bits (0x10/0x20) via XOR-then-OR-0x8080 pattern typical of STM32 USB EPnR write (toggle bits, invariant bits preserved)",
+    "peripheral": "USB (EPnR, offset 0xc00)"
+   },
+   {
+    "addr": "08004b84",
+    "role": "force USB EPnR STAT bits to '11' (0x30) - set endpoint STALL state",
+    "peripheral": "USB (EPnR, offset 0xc00)"
+   },
+   {
+    "addr": "08004bdc",
+    "role": "trampoline to FUN_08004be4",
+    "peripheral": "none",
+    "calls": "FUN_08004be4"
+   },
+   {
+    "addr": "08004be4",
+    "role": "USB clock/PLL enable sequencing on RCC: sets RCC bit 0x10000 (probably HSEON/USB-related), polls ready bit 0x20000 with 0x500 timeout, then configures PLL (CFGR writes 0x1d0000, 0x1000000), waits PLL ready (0x2000000), switches SYSCLK source - startup clock init, not runtime power-mode driver",
+    "peripheral": "RCC (0x40021000)"
+   },
+   {
+    "addr": "08004cc4",
+    "role": "disable a peripheral: calls FUN_08004678(0) then FUN_08004564(0x800000) - clears RCC_APB2ENR bit 0x800000 (this is GPIOx or AFIO clock-gate teardown, NOT SPI/LMX2594 specific - bit 0x800000 = AFIOEN region unlikely, more likely ADC1EN per STM32F1 bit map)",
+    "peripheral": "RCC (0x40021000)",
+    "calls": "FUN_08004678, FUN_08004564"
+   },
+   {
+    "addr": "08004cd8",
+    "role": "USB SETUP packet dispatch: copies request into control struct from descriptor table (DAT_08004d88 relative), byte-swaps wValue/wIndex via FUN_080019aa, then branches to FUN_08003d8c (no-data) or FUN_08001e84 (data-stage) handler, finally calls FUN_080044dc",
+    "peripheral": "USB",
+    "calls": "FUN_080019aa, FUN_08003d8c, FUN_08001e84, FUN_080044dc"
+   },
+   {
+    "addr": "08004d90",
+    "role": "GPIO-EXTI style endpoint/line configuration: reads config struct, checks TIM/GPIO capture-compare register at DAT_08004ef0+idx*4+0xc00 (mask 0x3000/0x30 = CCMR output-compare mode bits), sets up either input-capture via FUN_08004a48/FUN_08001c40 or forces compare-match via FUN_08001c74+FUN_08004b44(idx,0x30); this is a TIMx channel/CCMR config routine, offset 0xc00 pattern = timer capture/compare register block base",
+    "peripheral": "TIMx (0x40000000 family) - inferred from CCMR bitfields 0x3000/0x30 and offset 0xc00",
+    "calls": "FUN_08004a48, FUN_08001c40, FUN_08001c74, FUN_08004b44"
+   },
+   {
+    "addr": "08004efc",
+    "role": "endpoint/channel enable stub: if param_1==0 sets a status field to 1 and returns 0; else calls vtable(*DAT_08004f24) and returns offset+10 - generic dispatch wrapper, no direct peripheral write beyond RAM struct",
+    "peripheral": "none direct (vtable indirection)"
+   },
+   {
+    "addr": "08004f4c",
+    "role": "same pattern as 08004efc with different vtable slot (+8) and offset (+0xc) - generic dispatch wrapper variant",
+    "peripheral": "none direct"
+   },
+   {
+    "addr": "08004f78",
+    "role": "reads channel status byte, on state 0 derives 2-bit flags from control-byte bits 0x20/0x40 into output buffer DAT_0800506c; state 2 checks CCMR bits at DAT_08005070+idx*4+0xc00 (same TIMx CCMR pattern as 08004d90) to set bit0; calls vtable(*DAT_08005074+0x10)",
+    "peripheral": "TIMx (CCMR pattern, offset 0xc00)",
+    "calls": "vtable indirect"
+   },
+   {
+    "addr": "08005078",
+    "role": "bounds-check compare then writes a byte and calls vtable(*DAT_080050bc+4) - generic channel-arm routine",
+    "peripheral": "none direct (vtable)"
+   },
+   {
+    "addr": "080050c0",
+    "role": "sets bit 0x20 in a control byte then calls vtable(*DAT_080050e4+0x1c) - enable/arm routine",
+    "peripheral": "none direct (vtable)"
+   },
+   {
+    "addr": "080050e8",
+    "role": "reads channel index, checks TIMx CCMR bits (offset 0xc00 pattern) for capture-mode 0x1000/0x10, if active toggles CCMR mode bits (XOR 0x1000/0x10, OR 0x8080) and calls vtable(*DAT_080051b4+0x18) - TIMx channel mode toggle (capture<->compare)",
+    "peripheral": "TIMx (0xc00 CCMR pattern)"
+   },
+   {
+    "addr": "080051b8",
+    "role": "calls vtable(*DAT_0800521c+0x18)(byte,byte) - opaque channel read/compare op; on success stores results back into control struct and calls vtable(*DAT_08005220+0xc)",
+    "peripheral": "none direct (vtable), likely TIMx capture-value fetch"
+   },
+   {
+    "addr": "08005224",
+    "role": "USB PMA/BTABLE save-restore during reset: reads 8 words from CCMR-pattern block (DAT_080052b8+idx*4+0xc00) into RAM buffer, forces RCC or CR register (DAT_080052b4) bit 0x400/0x401 sequence (looks like RCC backup-domain or USB power-down/reset handshake polling bit 0x400 ready), restores the 8 words back, then finally calls FUN_08002270 (the known USB-suspend low-power-mode entry that sets RAM[0x20001ED0]=3) - this is the USB reset/wake sequencing wrapper feeding into the suspend callback; still NO SPI1/SPI2 writes and no LMX2594 register access anywhere in this cluster",
+    "peripheral": "RCC or USB CR (DAT_080052b4), CCMR-pattern block at 0xc00",
+    "calls": "FUN_08002270"
+   }
+  ]
+ },
+ {
+  "cluster": "cdc_io",
+  "functions": [
+   {
+    "addr": "0x08005224",
+    "role": "bit-bang shift-register/SPI-like exchange: save 8 words, set/clear bit0x400,busy-wait bit0x400,restore,then calls FUN_08002270 (USB suspend handler)",
+    "peripheral": "unclear-custom-bus(DAT ptrs, not directly SPI1/SPI2 literal)",
+    "calls": "FUN_08002270"
+   },
+   {
+    "addr": "0x080052c0",
+    "role": "SysTick enable/disable via CTRL bit2 (TICKINT)",
+    "peripheral": "SysTick 0xe000e010"
+   },
+   {
+    "addr": "0x080052ec",
+    "role": "peripheral clock/config setup for a UART/timer block, sets baud-like reg to 0x9f0000, calls FUN_08004bdc then writes 0x8000000 to a reg",
+    "peripheral": "unnamed reg block (literal pool ptr, not resolved to USB/SPI)"
+   },
+   {
+    "addr": "0x0800536c",
+    "role": "build/pack UART line-coding struct (baud,parity,databits,stopbits) and call USART config helpers",
+    "peripheral": "USART @0x40000000-region (TIM2/USART? per env map 0x40000000..)",
+    "calls": "FUN_08004564,FUN_0800541c,FUN_08005408,FUN_08003d08,FUN_080053ce"
+   },
+   {
+    "addr": "0x080053ce",
+    "role": "USART enable/disable bit0 toggle helper",
+    "peripheral": "USART-like reg (param_1)"
+   },
+   {
+    "addr": "0x080053e6",
+    "role": "flag-test helper: checks two status bits both set",
+    "peripheral": "generic reg test"
+   },
+   {
+    "addr": "0x08005408",
+    "role": "set/clear bitmask in CR1-like reg at offset 0xc",
+    "peripheral": "USART-like reg"
+   },
+   {
+    "addr": "0x0800541c",
+    "role": "USART line-coding apply: writes parity/stopbits/wordlen fields into CR-like regs by comparing param_1 against known USART base pointers",
+    "peripheral": "USART1/2/3 possible bases (DAT_08005498 etc)"
+   },
+   {
+    "addr": "0x080054c0",
+    "role": "baudrate divider selection dispatcher calling FUN_0800536c with computed divisor per range",
+    "peripheral": "none direct"
+   },
+   {
+    "addr": "0x080055a0",
+    "role": "set/clear bit0x2000 in CR-like reg offset 0xc",
+    "peripheral": "USART-like reg"
+   },
+   {
+    "addr": "0x080055b8",
+    "role": "CDC SET_LINE_CODING debug printf: clears 2 regs, prints linecoding baud/paritytype/datatype via FUN_08000328 (printf-lite) using strings 'linecoding_format','_paritytype','_datatype','_bitrate'",
+    "peripheral": "none (uses DAT pointer to linecoding struct)",
+    "calls": "FUN_08000328"
+   },
+   {
+    "addr": "0x080056c0",
+    "role": "generic GPIO/AFIO-style bit set/clear across 3 possible offset regs based on pin/group index",
+    "peripheral": "GPIO-like (offset0xc/0x10/0x14 pattern matches GPIOx CRL/CRH/ODR layout)"
+   },
+   {
+    "addr": "0x0800570c",
+    "role": "compute and apply USART baudrate divider (BRR) from PCLK, handles oversampling 8/16 mode bit0x8000 in CR-like reg",
+    "peripheral": "USART-like reg",
+    "calls": "FUN_080045a4"
+   },
+   {
+    "addr": "0x080057fc",
+    "role": "USB pullup control: prints 'usb pull up enable'/'usb pull up disable' string via FUN_08000328 based on param",
+    "peripheral": "none directly (string-only, actual GPIO pullup likely elsewhere)",
+    "calls": "FUN_08000328"
+   },
+   {
+    "addr": "0x08005844",
+    "role": "USB device init: writes DAT_08005868 into *DAT_0800586c, sets byte to 2 (state), sets two function pointers from constants, then calls indirect function pointer (likely USB reset/init callback)",
+    "peripheral": "USB (indirect call table)"
+   },
+   {
+    "addr": "0x08005880",
+    "role": "USB descriptor/config setup: calls FUN_080021d0(0x40000) [likely EXTI/USB IRQ config], builds packed struct, calls FUN_080021dc and FUN_08003d08 twice (queue/printf-style writes) with constants 0x1000114 and 0x2a",
+    "peripheral": "possible AFIO/EXTI (0x40000 pattern) or USB",
+    "calls": "FUN_080021d0,FUN_080021dc,FUN_08003d08"
+   },
+   {
+    "addr": "0x080058d4",
+    "role": "USB interrupt service handler: reads ISTR-like reg, dispatches on bit0x200(ESOF->FUN_0800485c),0x8000(SOF?->FUN_080019b8),0x400(RESET-> calls fn ptr at DAT_08005a90+4),0x2000(SUSP-clears bit,no further action seen here),0x1000(WKUP->FUN_08004768(0)),0x800(CTR/EP0-> either FUN_08004768(2) or FUN_08005224 depending on DAT_08005a94, i.e. direction flag),0x100(PMAOVR/CTR loop with counter DAT_08005a98, does the same save/toggle-bit0x400/busy-wait/restore sequence as FUN_08005224, then FUN_08004768(7))",
+    "peripheral": "USB @0x40005c00 (ISTR/CNTR pattern matches USB_ISTR bits: SUSP=0x2000, WKUP=0x1000, RESET=0x400, ESOF=0x200, SOF=0x8000, CTR=0x8000... note CTR bit0x800/0x100 EP-related)",
+    "calls": "FUN_0800485c,FUN_080019b8,FUN_08004768,FUN_08005224 - NOTE: SUSP branch (bit0x2000) only clears ISTR bit, does NOT call FUN_08002270 or any SPI/LMX2594 powerdown -> confirms no synth shutdown on USB suspend from this ISR path either"
+   },
+   {
+    "addr": "0x08005aac",
+    "role": "RCC/clock or DMA channel enable-disable: sets/clears bit1 in a CR reg and reconfigures another reg's bits 12-19 to 0x33 pattern when enabling, else just clears bit1",
+    "peripheral": "unresolved (DAT ptr, offset pattern resembles RCC or DMA CCR)",
+    "calls": "FUN_08004584"
+   },
+   {
+    "addr": "0x08005bd8",
+    "role": "ring-buffer push: writes byte param_1 at buffer+write_index (offset 0x400 holds 16-bit index), increments index mod 0x400 (1024-byte circular buffer) - classic USB-CDC TX/RX ring buffer put",
+    "peripheral": "none (SRAM buffer)"
+   },
+   {
+    "addr": "0x08005c0c",
+    "role": "copy 16-bit halfwords from source array into a strided destination buffer (step of 2 units) for param_3+1 words - looks like LCD/display buffer blit, not CDC",
+    "peripheral": "unresolved DAT base"
+   },
+   {
+    "addr": "0x08005ec4",
+    "role": "pack 5 params (freq/state values) into 14-byte little-endian buffer and pass to FUN_080048b4 (likely USB CDC transmit/queue send)",
+    "peripheral": "none direct; feeds USB-CDC TX via FUN_080048b4",
+    "calls": "FUN_0800057e,FUN_080048b4"
+   },
+   {
+    "addr": "0x08005f50",
+    "role": "LMX2594 frequency-to-register calculator: range-select N-divider/prescaler table lookup based on target frequency (param_1), computes VCO band/PLL N,FRAC via 64-bit math helpers, writes resulting register words via FUN_080069f4 (SPI1 register-write queue for LMX2594) - core synth programming routine, NOT power-down related",
+    "peripheral": "SPI1 (indirect, via FUN_080069f4 which is presumed LMX2594 SPI writer)",
+    "calls": "FUN_08006ffe,FUN_08007024,FUN_080069f4,FUN_08006cf4,FUN_08006fa4,FUN_08007220"
+   },
+   {
+    "addr": "0x080062a4",
+    "role": "float/double classification helper (checks exponent bits 0x7ff = NaN/Inf, mantissa nonzero) - math library support, unrelated to CDC",
+    "peripheral": "none"
+   },
+   {
+    "addr": "0x080062cc",
+    "role": "ASCII digit-check helper (param-0x30 <10)",
+    "peripheral": "none"
+   },
+   {
+    "addr": "0x080062da",
+    "role": "empty stub/no-op function",
+    "peripheral": "none"
+   },
+   {
+    "addr": "0x080062e0",
+    "role": "LCD/display bitmap blit: iterates 64 bytes x 8 bits, for each set bit calls FUN_0800278c(pixel-set) with computed x/y from lookup tables - font/char rendering, not CDC",
+    "peripheral": "unresolved DAT (likely GPIO for LCD)",
+    "calls": "FUN_0800278c"
+   },
+   {
+    "addr": "0x08006364",
+    "role": "disables SysTick (FUN_080052c0(0xfffffffb)) then computes a scaled byte value (division + multiply-by-approx-126 trick) into DAT_080063a4 - looks like ADC/battery or PWM duty calc, incidental to CDC cluster",
+    "peripheral": "SysTick (via FUN_080052c0)",
+    "calls": "FUN_080052c0"
+   },
+   {
+    "addr": "0x080063a8",
+    "role": "SysTick reload/start: writes reload value = param*const to SysTick LOAD (0xe000e014), busy-waits COUNTFLAG (bit16 of CTRL 0xe000e010), clears ENABLE bit, clears VAL (0xe000e018) - blocking millisecond delay routine",
+    "peripheral": "SysTick 0xe000e010/e014/e018"
+   },
+   {
+    "addr": "0x08006410",
+    "role": "MAIN LOOP / command dispatcher: init sequence (delay,SPI/LCD init,LMX2594 init via FUN_08005aac(0/1) + FUN_08004cc4, USB init FUN_08005880+FUN_08005844), then infinite loop reading USB-CDC RX command string (_DAT_08006844 buffer) parsing 'start','stop','w1'..'w3','wt','wv' ASCII commands, updating freq/span/power globals, calling FUN_08005f50 (LMX register calc) + FUN_08003480 (SPI write presumably) + FUN_08006b10 (CDC string TX) + FUN_08005ec4 (status pack) each iteration. NO suspend/idle/low-power branch, NO SPI powerdown call anywhere in this loop.",
+    "peripheral": "aggregate: SysTick,SPI(via FUN_08003480),USB-CDC(via FUN_08006b10)",
+    "calls": "FUN_08006364,FUN_08003d78,FUN_08006a6c,FUN_08002630,FUN_08003ec4,FUN_08002760,FUN_08001ca8,FUN_08005aac,FUN_080063a8,FUN_08004cc4,FUN_08005880,FUN_08005844,FUN_08002974,FUN_08004684,FUN_08002e0c,FUN_08005f50,FUN_08003480,FUN_08006b10,FUN_08005ec4,FUN_080040a8"
+   }
+  ]
+ },
+ {
+  "cluster": "app_main",
+  "functions": [
+   {
+    "addr": "0x08006410",
+    "role": "Main superloop: init sequence then infinite polling loop parsing UART/command strings (start/stop/w1/w2/w3/wt/wv) into freq/power/span state vars, drives sweep + LMX2594 programming",
+    "peripheral": "none directly; calls SPI/GPIO via subroutines",
+    "calls": "FUN_08006364,FUN_08003d78,FUN_08006a6c(0x2580 SPI1 setup),FUN_08002630,FUN_08003ec4,FUN_08002760,FUN_08001ca8,FUN_08005aac,FUN_080063a8(delay),FUN_08004cc4,FUN_08005880,FUN_08005844,FUN_08002974,FUN_08004684,FUN_08002e0c,FUN_08005f50(LMX2594 freq write?),FUN_08003480,FUN_08006b10(UART/LCD print),FUN_08005ec4"
+   },
+   {
+    "addr": "0x0800690c",
+    "role": "LCD/font bitmap render: iterates 8x8 char bitmap bits from font table, plots pixels via FUN_0800278c depending on threshold table DAT_080069e8 keyed by a param value bucketed into ranges (0-7,8-15,16-23,24-27,28-29 -> pixel offset)",
+    "peripheral": "none direct (calls low-level pixel plot, likely GPIO bit-bang LCD)",
+    "calls": "FUN_0800278c"
+   },
+   {
+    "addr": "0x080069f4",
+    "role": "Bit-bang serial-out helper: shifts 24 bits of param_1 MSB-first into a GPIO/SPI-like protocol via FUN_080024da/FUN_080024de (set/clear pin), toggling a clock/data or CS pattern 0x800/0x1000/2 masks — looks like manual GPIO bit-bang (chip-select+clock+data) rather than hw SPI, possibly LCD or DDS control",
+    "peripheral": "GPIO (bit-bang, base not directly visible, uses DAT_08006a68 pointer to a GPIO port ODR/BSRR)",
+    "calls": "FUN_080024da,FUN_080024de"
+   },
+   {
+    "addr": "0x08006a6c",
+    "role": "SPI1 peripheral init/config for LMX2594: sets CR1 (baud/mode fields 0x400,3,0x18 pattern) then CR2 (0x800,4), configures a struct (local_20..1d = 0x27,1,1,1) via FUN_08003d08 (likely NVIC/DMA), then builds a 12-byte struct with param_1 as field and calls FUN_0800570c/FUN_080056c0(...,0x525,1)/FUN_080055a0 — looks like SPI1 (DAT_08006b08) init + timer/NVIC config (DAT_08006b0c) using param_1=0x2580 as reload/prescaler value",
+    "peripheral": "SPI1 (0x40013000-based, DAT_08006b08) + TIMx or NVIC (DAT_08006b0c)",
+    "calls": "FUN_08004564,FUN_08004584,FUN_080023b2,FUN_08003d08,FUN_0800570c,FUN_080056c0,FUN_080055a0"
+   },
+   {
+    "addr": "0x08006b10",
+    "role": "printf-style formatter+UART/LCD char-out: formats param_1..4 via FUN_08000304 (sprintf-like), gets length via FUN_08000540, then streams each byte to FUN_08005bd8 (putchar to UART or LCD)",
+    "peripheral": "none direct (delegates to FUN_08005bd8 which likely touches USART/GPIO)",
+    "calls": "FUN_08000304,FUN_08000540,FUN_08005bd8"
+   },
+   {
+    "addr": "0x08006b4c",
+    "role": "String compare/lookup helper: if param_2 non-null/non-empty calls FUN_0800113c (strcmp-like) against string at DAT_08006b70+offset, returns 0 on match else returns pointer DAT_08006b74+offset (menu/command table lookup)",
+    "peripheral": "none",
+    "calls": "FUN_0800113c"
+   },
+   {
+    "addr": "0x08006b78",
+    "role": "Same pattern as FUN_08006b4c, different table offsets (DAT_08006b9c/08006ba0) — another string/command lookup entry",
+    "peripheral": "none",
+    "calls": "FUN_0800113c"
+   },
+   {
+    "addr": "0x08006cf4",
+    "role": "Compiler runtime: IEEE754 double division (__aeabi_ddiv / __divdf3 style), NOT app logic",
+    "peripheral": "none",
+    "calls": "FUN_08007178(trap handler)"
+   },
+   {
+    "addr": "0x08006fa4",
+    "role": "Runtime helper for double denormalization/rounding, part of same float division library, falls into trap loop on error path",
+    "peripheral": "none",
+    "calls": "FUN_08007178"
+   },
+   {
+    "addr": "0x08006ffe",
+    "role": "Runtime helper: normalizes an int into double bit pattern (int-to-double conversion, __aeabi_i2d style)",
+    "peripheral": "none",
+    "calls": "none"
+   },
+   {
+    "addr": "0x08007024",
+    "role": "Compiler runtime: IEEE754 double multiplication (__aeabi_dmul / __muldf3)",
+    "peripheral": "none",
+    "calls": "FUN_08007178"
+   },
+   {
+    "addr": "0x08007178",
+    "role": "Float exception/trap dispatcher: jump table on special-value case (NaN/Inf/zero combos), calls into fault handler or does saturating add for edge case",
+    "peripheral": "none",
+    "calls": "indirect jumptable (software_interrupt in some callers)"
+   },
+   {
+    "addr": "0x08007220",
+    "role": "Compiler runtime: IEEE754 double subtraction/addition (__aeabi_dsub/__adddf3), includes bad-instruction trap paths (halt_baddata/software_interrupt 0x40) for exponent overflow",
+    "peripheral": "none",
+    "calls": "FUN_08007178"
+   }
+  ]
+ }
+]

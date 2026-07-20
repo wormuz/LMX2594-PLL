@@ -1,0 +1,9 @@
+All four claims CONFIRMED against decompiled code and disassembly, with evidence addresses.
+
+**Bug 1 (no length check):** CONFIRMED. `FUN_08006410` dispatch block gates only on `(*DAT_08006840 & 0x8000)` (line-ready bit at RAM 0x20001DD8), never consults the length field. Disassembly at 0x080067fa-0x08006808 shows `wv` reading `buf[2]`/`buf[3]` directly with no length reference anywhere. Shared-buffer claim independently verified: literal pools at 0x08006840/0x08006844 and 0x08005bd0/0x08005bd4 both resolve to identical bytes `d81d0020`/`8c280020` (0x20001DD8/0x2000288C).
+
+**Bug 2 (no range validation):** CONFIRMED for `wv`, with nuance for `w1/w2/w3`. Concrete proof: SPI template `DAT_080062a0 = 0x2C0023` (register 0x2C = R44 per datasheet), code computes `0x2C0023 | (param_2<<8)`. `wv99` parses to 99 (0x63); shifted into bits[13:8] this overflows the 6-bit OUTA_PWR field into bit6 (OUTA_PD), exactly as claimed. For `w1/w2/w3`, `FUN_08005f50` does have internal band-threshold cascades that fall back to a default divider/band rather than crashing on out-of-range input — this is not command-level validation as claimed, but it does mean out-of-range frequencies aren't fully arbitrary-register corruption; noted as nuance, does not invalidate the core claim (no 20MHz-15.5GHz check exists before acceptance).
+
+**Bug 3 (no digit validation):** CONFIRMED. Disassembly shows raw `subs r0,#0x30` with no preceding `cmp` bounding the byte to '0'-'9' anywhere in the dispatcher.
+
+**Bug 4 (no channel isolation):** CONFIRMED structurally — single shared buffer/state with no lock, verified via identical literal pools. Could not independently locate the USART ISR call sites to `FUN_08005b58` in this pass (xref search returned empty, likely BL-relative encoding not indexed as data reference), but this doesn't undermine the claim since the shared unlocked buffer is already proven.

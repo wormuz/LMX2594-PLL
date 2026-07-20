@@ -1,0 +1,13 @@
+## UART/USB CLI parser bugs (verified via decompile of FUN_08006410, FUN_08005b58, FUN_080040a8, memory read of shared RAM)
+
+**Shared RX plumbing (verified fact, not a bug by itself):** `FUN_08005b58` is the single line-assembler for both USART1/USART3 and USB-CDC RX. It fills a 200-byte ring buffer at RAM 0x2000288C using a 16-bit state word at RAM 0x20001DD8 (bit15=line-ready, bit14=CR-seen, bits[13:0]=length). `FUN_08006410` (the CLI dispatcher) reads the identical addresses via `*DAT_08006840`/`_DAT_08006844` — confirmed by raw memory read, both pointer tables resolve to 0x20001DD8/0x2000288C. So "10-byte cmd buffer" in the task brief is incorrect — actual buffer is 200 bytes shared across both channels.
+
+**Bug 1 — no length check before fixed-offset parsing.** `FUN_08006410` @0x08006410 dispatches `w1`/`w2`/`w3` (freq1/freq2/step) by reading `buf[2]..buf[9]` (8 ASCII digits), `wt` reads `buf[2]..buf[5]`, `wv` reads `buf[2]..buf[3]` — unconditionally, without ever consulting the received length in the state word. Trigger: send a short line, e.g. `"w1\r\n"`. Remaining offsets contain stale bytes from a previous command or boot-time zero-fill. Result: `*DAT_0800681c` (freq1, RAM 0x20001C74) gets a garbage value and is immediately programmed into the LMX2594 over SPI via `FUN_08005f50`.
+
+**Bug 2 — no range validation on parsed values.** Unlike the on-device button editor (`FUN_080040a8` @0x080040a8), which clamps every field against `DAT_0800445c` = 0xEC82E0 = 15,500,000 (kHz, i.e. 15.5GHz) for frequency and `< 0x40` for the 6-bit power field before applying deltas, the UART/USB write path applies zero clamping. `wv99\r\n` writes 99 into a field whose hardware range (R44 OUTA_PWR[13:8]) is 6 bits (0-63) — bit6 overlap risks corrupting OUTA_PD. `w1`/`w2`/`w3` accept any 8-digit value with no check against the 20MHz-15.5GHz (20,000-15,500,000 kHz) valid range before firing PLL programming.
+
+**Bug 3 — no digit validation in ASCII-to-int conversion.** All numeric parsing is raw `(byte)ch - 0x30` with no verification the byte is `'0'-'9'`. Any non-digit (deliberate malformed command, or garbage from Bug 1) yields an arbitrary signed/unsigned delta silently folded into the target register value — the command "succeeds" with no error reported, reprogramming the PLL with garbage.
+
+**Bug 4 — no channel isolation between USB-CDC and UART3.** Both RX sources feed the same buffer/state pair with no locking or source tagging. Concurrent use of both interfaces can interleave partial lines into one corrupted command that still gets dispatched.
+
+All four are corroborated directly against the decompiled code and cross-checked memory addresses; no speculative claims included.

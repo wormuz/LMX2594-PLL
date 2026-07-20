@@ -1,0 +1,9 @@
+**Verification summary (area: init_usb / USART3-CLI claims):**
+
+- **Freq-divider fallback (0x08005f50)** — CONFIRMED. Below the lowest CHDIV bracket, `bVar1` stays false and the code takes the undivided-VCO else-branch with zero error signaling.
+- **Suspend/resume overheat bug (0x08002270/0x08003cc0)** — CONFIRMED. Both are pure log+state-var stubs; zero SPI (`FUN_080069f4`) or GPIO calls.
+- **CLI ASCII-digit parsing (0x08006410)** — CONFIRMED. `w1/w2/w3/wt/wv` handlers do raw `byte-0x30` arithmetic straight into register variables, no bounds checks, before SPI programming.
+- **USART3/NVIC claim — REVERSED, not just confirmed.** NVIC_ISER (0xE000E100) is indeed never written anywhere in the 64KiB image (zero hex hits both byte orders) — that part holds. But the prior conclusion "USART3 feeds only a debug/status printf path, not the FUN_08006410 dispatcher" is **wrong**. Vector-table offset 0xDC (IRQ39=USART3) contains a real handler at 0x08005518 (not the default `fee7` dead-loop stub used by all other unimplemented IRQs). That handler polls RXNE and reads DR on base 0x40004800 (via `FUN_0800566c`/`FUN_080057e4`), and writes into `0x20001dd8`(flag)/`0x2000288c`(buffer) — the exact same RAM locations `FUN_08006410`'s CLI dispatcher reads (`DAT_08006840`→0x20001dd8, `_DAT_08006844`→0x2000288c). USART3 is a second, currently-dead (unreachable via NVIC) CLI input path sharing the dispatcher buffer with USB-CDC, not an unrelated status/printf channel.
+- **Sweep start>stop gating (0x08003480)** — REJECTED. The ERROR branch (`start>=stop`) calls `FUN_080053ce(0x40000000,0)`, which clears CEN (bit0) of the sweep timer's control register, and the outer `if(param_1<=param_2)` guard skips the `FUN_08005f50` frequency-programming call entirely in that case. The sweep engine is genuinely disabled, not just mislabeled.
+
+Full findings reported via ReportFindings (5 items, most-severe first).

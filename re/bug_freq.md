@@ -1,0 +1,3 @@
+Bug hunt complete. Key finding: `FUN_08005f50` (freq retune, addr 0x08005F50-0x08006024, called on menu edit / UART w1,w2,w3 / sweep step) reprograms R43,R42,R36,R37 but never writes R0 -> FCAL_EN never re-armed after boot, so VCO recal never runs on retune. Also R34 (N[18:16]) written once at boot (0x08002c30, data=0) and never touched again -> stuck at 0. R36 write ORs raw N straight into `0x240000` without masking to 16 bits first -> if N>=0x10000 corrupts SPI target address, not just data. No freq-range clamp/reject in that function either -> out-of-ladder input silently takes VCO-direct path.
+
+Findings reported via ReportFindings (4 items, all address/evidence-backed from disassembly+decompile, no speculation).

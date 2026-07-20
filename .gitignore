@@ -1,0 +1,14 @@
+# build
+fw/.pio/
+# Ghidra project (large, regenerable)
+lmx2594.rep/
+lmx2594.gpr
+lmx2594.lock
+lmx2594.lock~
+# generated headers (regenerated from re/pcf_to_font.py)
+# keep them committed — needed to build without fonts installed
+# scratch
+tmp/
+*.o
+*.elf
+*.bin.bak
