@@ -52,15 +52,15 @@ def save(im,n): im.resize((W*S,H*S),Image.NEAREST).save(f"{DESK}/{n}"); print("w
 
 # ===== 1. ГОЛОВНИЙ (усе вимкнено за замовч.) =====
 im,px=cv()
-txt(px,4,2,"UNLOCK",RED); txt(px,120,2,"UART",CYAN)
+txt(px,4,2,"LOCK",GREEN); txt(px,120,2,"UART",CYAN)
 line(im,22)
 txt(px,66,28,"Частота, кГц",GREY)
 txt(px,42,54,"2 400 000",WHITE,scale=2)   # centered-ish
 line(im,98)
-txt(px,6,108,"Down-вихід: OFF  31",GREY)
+txt(px,6,108,"Down-вихід: ON   45",GREEN)   # увімкнено
 txt(px,6,132,"Up-вихід:   OFF  31",GREY)
 line(im,160)
-txt(px,6,172,"Температура: 24 C",GREY)
+txt(px,6,172,"Температура: 38 C",GREY)
 line(im,196)
 txt(px,6,206,"центр — меню",GREY)
 save(im,"lmx_ui_1_home.png")
@@ -69,11 +69,12 @@ save(im,"lmx_ui_1_home.png")
 im,px=cv()
 txt(px,96,3,"МЕНЮ",CYAN)
 line(im,24)
-rows=["Задати частоту","Down-вихід","Up-вихід","Потужність виходів",
-      "Зберегти налаштування","Налаштування системи","Назад"]
-for i,r in enumerate(rows):
+rows=[("Задати частоту",WHITE),("Down-вихід: ON",GREEN),("Up-вихід: OFF",GREY),
+      ("Потужність виходів",WHITE),("Зберегти налаштування",WHITE),
+      ("Налаштування системи",WHITE),("Назад",WHITE)]
+for i,(r,c) in enumerate(rows):
     if i==0: txtbg(im,6,34+i*26,r)
-    else: txt(px,6,34+i*26,r,WHITE)
+    else: txt(px,6,34+i*26,r,c)
 save(im,"lmx_ui_2_menu.png")
 
 # ===== 3. ЗАДАТИ ЧАСТОТУ (порозрядно) =====
