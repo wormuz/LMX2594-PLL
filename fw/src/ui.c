@@ -1,0 +1,212 @@
+/* ui.c — two-level UI: HOME dashboard -> MENU -> modal editors.
+ * Ukrainian, 9x18 font. Selected line inverted. Full repaint on screen change
+ * (no cursor-trail, fix B9). Sweep intentionally absent from UI (UART-only). */
+#include "ui.h"
+#include "board.h"
+#include "st7789.h"
+#include "version.h"
+#include "app.h"
+#include "settings.h"
+#include "lmx2594.h"
+#include <stdio.h>
+#include <string.h>
+
+#define ROW_H 20
+#define Y0    30
+
+typedef enum { SC_HOME, SC_MENU, SC_FREQ, SC_PWR, SC_SYS } screen_t;
+static screen_t sc = SC_HOME;
+static int sel;                 /* selected row index within screen */
+static int dirty = 1;           /* full repaint needed */
+
+/* frequency digit editor state */
+static uint32_t edit_val;       /* value being edited, kHz */
+static int edit_digit;          /* active digit index, 0 = most significant */
+#define FREQ_DIGITS 8
+
+/* ---- menu definition ---- */
+static const char *MENU[] = {
+    "Задати частоту", "Down-вихід", "Up-вихід",
+    "Потужність виходів", "Зберегти налаштування",
+    "Налаштування системи",
+};
+#define MENU_N (int)(sizeof(MENU)/sizeof(MENU[0]))
+
+static const char *SYS[] = {
+    "Опора: 10 МГц", "UART: 115200", "При старті: OFF", "Яскравість: 80%",
+    "Скинути", "Назад",
+};
+#define SYS_N (int)(sizeof(SYS)/sizeof(SYS[0]))
+
+static uint32_t pow10u(int n){ uint32_t v=1; while(n--) v*=10; return v; }
+
+void ui_mark_dirty(void){ dirty = 1; }
+
+/* ---- painters (each does a full clear of its region) ---- */
+static void paint_home(void)
+{
+    lcd_fill(C_BLACK);
+    lcd_str(4, 2, lmx_locked() ? "Захоплено" : "Вимкнено",
+            lmx_locked()?C_GREEN:C_GREY, C_BLACK, 0);
+    lcd_str(120, 2, "UART", C_CYAN, C_BLACK, 0);
+    lcd_hline(22, C_GREY);
+    char b[24];
+    lcd_str(84, 28, "Частота", C_GREY, C_BLACK, 0);
+    snprintf(b,sizeof b,"%lu", (unsigned long)g_set.f_lo_khz);
+    lcd_str2x(14, 52, b, C_WHITE, C_BLACK);          /* big frequency */
+    lcd_str(200, 60, "кГц", C_GREY, C_BLACK, 0);
+    lcd_hline(96, C_GREY);
+    snprintf(b,sizeof b,"Down-вихід: %s %2u", g_set.outa_en?"увімк":"вимк ", g_set.outa_pwr);
+    lcd_str(6, 108, b, g_set.outa_en?C_GREEN:C_GREY, C_BLACK, 0);
+    snprintf(b,sizeof b,"Up-вихід:   %s %2u", g_set.outb_en?"увімк":"вимк ", g_set.outb_pwr);
+    lcd_str(6, 132, b, g_set.outb_en?C_GREEN:C_GREY, C_BLACK, 0);
+    lcd_hline(160, C_GREY);
+    lcd_str(6, 172, "Температура: 24 C", C_GREY, C_BLACK, 0);
+    lcd_hline(196, C_GREY);
+    lcd_str(6, 206, "центр — меню", C_GREY, C_BLACK, 0);
+}
+
+static void paint_list(const char *title, const char *const *items, int n)
+{
+    lcd_fill(C_BLACK);
+    lcd_str(80, 4, title, C_CYAN, C_BLACK, 0);
+    lcd_hline(24, C_GREY);
+    for (int i = 0; i < n; i++)
+        lcd_str(6, Y0 + i*ROW_H, items[i], C_WHITE, C_BLACK, i==sel);
+    lcd_hline(214, C_GREY);
+    lcd_str(6, 220, "вліво — назад", C_GREY, C_BLACK, 0);
+}
+
+static void paint_freq(void)
+{
+    lcd_fill(C_BLACK);
+    lcd_str(30, 6, "Задати частоту", C_CYAN, C_BLACK, 0);
+    char b[FREQ_DIGITS+1];
+    snprintf(b,sizeof b,"%08lu",(unsigned long)edit_val);
+    int x=20, y=70;
+    for (int i=0;i<FREQ_DIGITS;i++){
+        char d[2]={b[i],0};
+        lcd_str(x, y, d, i==edit_digit?C_WHITE:C_YELLOW_, C_BLACK, i==edit_digit);
+        x += GLYPH_W+8;
+    }
+    lcd_str(80, 120, "кГц", C_GREY, C_BLACK, 0);
+    char step[20]; snprintf(step,sizeof step,"крок: %lu", (unsigned long)pow10u(FREQ_DIGITS-1-edit_digit));
+    lcd_str(60, 150, step, C_GREEN, C_BLACK, 0);
+    lcd_str(6, 200, "L/R розряд  U/D змінити", C_GREY, C_BLACK, 0);
+}
+
+static void paint_menu(void)
+{
+    lcd_fill(C_BLACK);
+    lcd_str(80, 4, "МЕНЮ", C_CYAN, C_BLACK, 0);
+    lcd_hline(24, C_GREY);
+    char b[28];
+    for (int i = 0; i < MENU_N; i++) {
+        const char *t = MENU[i];
+        if (i == 1) { snprintf(b,sizeof b,"Down-вихід: %s", g_set.outa_en?"увімк":"вимк"); t = b; }
+        else if (i == 2) { snprintf(b,sizeof b,"Up-вихід:   %s", g_set.outb_en?"увімк":"вимк"); t = b; }
+        uint16_t fg = C_WHITE;
+        if (i == 1) fg = g_set.outa_en ? C_GREEN : C_GREY;
+        if (i == 2) fg = g_set.outb_en ? C_GREEN : C_GREY;
+        lcd_str(6, Y0 + i*ROW_H, t, fg, C_BLACK, i==sel);
+    }
+    lcd_hline(214, C_GREY);
+    lcd_str(6, 220, "вліво — назад", C_GREY, C_BLACK, 0);
+}
+
+static void paint(void)
+{
+    switch (sc) {
+        case SC_HOME: paint_home(); break;
+        case SC_MENU: paint_menu(); break;
+        case SC_SYS:  paint_list("Система", SYS, SYS_N); break;
+        case SC_FREQ: paint_freq(); break;
+        case SC_PWR:  paint_list("Потужність", (const char*[]){"OUTA","OUTB","Назад"}, 3); break;
+        default: break;
+    }
+    dirty = 0;
+}
+
+void ui_init(void)
+{
+    lcd_init();
+    lcd_str(36, 80, "LMX2594-EVAL", C_RED, C_BLACK, 0);
+    lcd_str(30, 110, "build " GIT_HASH, C_GREY, C_BLACK, 0);
+    for (volatile int d=0; d<3000000; d++) { }     /* short splash (~0.3s) */
+    sc = SC_HOME; sel = 0; dirty = 1;
+}
+
+/* commit edited frequency, clamp to range */
+static void freq_commit(void)
+{
+    if (edit_val < LMX_FOUT_MIN_KHZ) edit_val = LMX_FOUT_MIN_KHZ;
+    if (edit_val > LMX_FOUT_MAX_KHZ) edit_val = LMX_FOUT_MAX_KHZ;
+    app_set_lo(edit_val);
+}
+
+void ui_handle(btn_t b)
+{
+    switch (sc) {
+    case SC_HOME:
+        if (b == BTN_CENTER) { sc = SC_MENU; sel = 0; dirty = 1; }
+        break;
+
+    case SC_MENU:
+        if (b == BTN_UP)    { if (sel>0) sel--; dirty=1; }
+        if (b == BTN_DOWN)  { if (sel<MENU_N-1) sel++; dirty=1; }
+        if (b == BTN_CENTER) {
+            switch (sel) {
+                case 0: edit_val=g_set.f_lo_khz; edit_digit=0; sc=SC_FREQ; break;
+                case 1: app_output_enable(0, !g_set.outa_en); break;   /* Down toggle */
+                case 2: app_output_enable(1, !g_set.outb_en); break;   /* Up toggle */
+                case 3: sc=SC_PWR; sel=0; break;
+                case 4: app_save(); break;
+                case 5: sc=SC_SYS; sel=0; break;
+            }
+            dirty=1;
+        }
+        if (b == BTN_LEFT) { sc = SC_HOME; dirty=1; }   /* back */
+        break;
+
+    case SC_FREQ:
+        if (b == BTN_LEFT)  { if (edit_digit>0) edit_digit--; dirty=1; }
+        if (b == BTN_RIGHT) { if (edit_digit<FREQ_DIGITS-1) edit_digit++; dirty=1; }
+        if (b == BTN_UP || b == BTN_DOWN) {
+            uint32_t step = pow10u(FREQ_DIGITS-1-edit_digit);
+            if (b==BTN_UP) edit_val += step; else if (edit_val>=step) edit_val -= step;
+            if (edit_val > 99999999u) edit_val = 99999999u;
+            dirty=1;
+        }
+        if (b == BTN_CENTER) { freq_commit(); sc=SC_MENU; sel=0; dirty=1; }
+        break;
+
+    case SC_PWR:
+        if (b == BTN_UP)   { if(sel>0) sel--; dirty=1; }
+        if (b == BTN_DOWN) { if(sel<2) sel++; dirty=1; }
+        if (b == BTN_LEFT || b == BTN_RIGHT) {
+            int d = (b==BTN_RIGHT)?+1:-1;
+            if (sel==0) app_set_power(0,(uint8_t)((g_set.outa_pwr+d)&0x3F));
+            else if (sel==1) app_set_power(1,(uint8_t)((g_set.outb_pwr+d)&0x3F));
+            dirty=1;
+        }
+        if (b == BTN_CENTER && sel==2) { sc=SC_MENU; sel=0; dirty=1; }
+        break;
+
+    case SC_SYS:
+        if (b == BTN_UP)   { if(sel>0) sel--; dirty=1; }
+        if (b == BTN_DOWN) { if(sel<SYS_N-1) sel++; dirty=1; }
+        if (b == BTN_CENTER) {
+            if (sel==4) app_save();               /* reset placeholder */
+            if (sel==5) { sc=SC_MENU; sel=0; }
+            dirty=1;
+        }
+        if (b == BTN_LEFT) { sc=SC_MENU; sel=0; dirty=1; }
+        break;
+    default: break;
+    }
+}
+
+void ui_refresh(void)
+{
+    if (dirty) paint();
+}
