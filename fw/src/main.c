@@ -11,24 +11,33 @@ static volatile uint32_t ms;
 void SysTick_Handler(void){ ms++; }
 static uint32_t now(void){ return ms; }
 
-/* ---- MCU internal temperature (ADC1 ch16). Board-heat proxy (LMX has no sensor). ---- */
+/* ---- ADC1: internal temp (ch16) + Vrefint (ch17) for Vdd measurement. ---- */
 static void adc_init(void)
 {
     RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
     RCC->CFGR = (RCC->CFGR & ~RCC_CFGR_ADCPRE) | RCC_CFGR_ADCPRE_DIV6;  /* 72/6=12MHz */
-    ADC1->CR2 = ADC_CR2_TSVREFE | ADC_CR2_ADON;                        /* enable temp sensor */
-    ADC1->SMPR1 |= (7u << 18);                                         /* ch16 max sample time */
-    ADC1->SQR3 = 16;                                                   /* channel 16 */
+    ADC1->CR2 = ADC_CR2_TSVREFE | ADC_CR2_ADON;                        /* temp+Vrefint on */
+    ADC1->SMPR1 |= (7u<<18) | (7u<<21);                                /* ch16,ch17 max sample */
     for (volatile int d=0; d<10000; d++) {}
-    ADC1->CR2 |= ADC_CR2_CAL; while (ADC1->CR2 & ADC_CR2_CAL) {}       /* calibrate */
+    ADC1->CR2 |= ADC_CR2_CAL; while (ADC1->CR2 & ADC_CR2_CAL) {}
+}
+static uint32_t adc_read(int ch)
+{
+    ADC1->SQR3 = ch;
+    ADC1->CR2 |= ADC_CR2_ADON; while (!(ADC1->SR & ADC_SR_EOC)) {}
+    return ADC1->DR;
+}
+/* Vdd from internal 1.20V reference: Vdd = 1200mV * 4095 / adc(Vrefint). */
+int mcu_vdd_mv(void)
+{
+    uint32_t vref = adc_read(17); if (!vref) return 3300;
+    return (int)(1200u * 4095u / vref);
 }
 int mcu_temp_c(void)
 {
-    ADC1->CR2 |= ADC_CR2_ADON; while (!(ADC1->SR & ADC_SR_EOC)) {}
-    uint32_t v = ADC1->DR;
-    int mv = (int)(v * 3300 / 4095);        /* mV */
-    /* T = (V25 - Vsense)/Avg_Slope + 25; V25=1430mV, slope=4.3mV/C */
-    return (1430 - mv) * 10 / 43 + 25;
+    int vdd = mcu_vdd_mv();
+    int mv = (int)(adc_read(16) * vdd / 4095);      /* scale by real Vdd */
+    return (1430 - mv) * 10 / 43 + 25;              /* V25=1430mV, 4.3mV/C */
 }
 
 /* ---- clock: HSE 8MHz -> PLL x9 -> 72MHz ---- */
@@ -101,11 +110,22 @@ int main(void)
     app_init();          /* loads settings, inits LMX, applies output/thermal state */
     uart_out("LMX2594 ready\r\n");   /* boot banner: confirms TX + baud on host */
 
+    uint32_t uv_next = 0;
     for (;;) {
         btn_t b = buttons_poll(now());
         if (b != BTN_NONE) { ui_handle(b); }
         app_tick(now());
         ui_refresh();
+
+        /* undervoltage guard: sag while outputs on -> kill both + alert. */
+        if (now() - uv_next >= 200u) {                 /* check ~5x/s */
+            uv_next = now();
+            if (app_outputs_active() && mcu_vdd_mv() < 3000) {
+                app_output_enable(0, false);
+                app_output_enable(1, false);
+                ui_alert("Нехватка потужності");
+            }
+        }
         /* USB-CDC service would go here (usb_cdc_poll -> cli_rx_byte) */
     }
 }

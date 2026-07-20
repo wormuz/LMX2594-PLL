@@ -21,5 +21,6 @@ void app_set_dwell(uint16_t ms);
 void app_sweep(bool run);
 void app_save(void);
 void app_status(char *buf, uint32_t n);  /* fills "LO:.. A:.. B:.. PA:.. PB:.. L:.. SW:.." */
+int  app_outputs_active(void);           /* 1 if any LMX output enabled */
 
 #endif /* APP_H */

@@ -12,6 +12,7 @@ static uint32_t sweep_cur_khz;
 static uint32_t sweep_last_ms;
 
 static bool any_output_on(void){ return g_set.outa_en || g_set.outb_en; }
+int app_outputs_active(void){ return any_output_on() ? 1 : 0; }
 
 /* apply thermal policy: chip on iff any output enabled, else deep powerdown. */
 static void thermal_update(void)

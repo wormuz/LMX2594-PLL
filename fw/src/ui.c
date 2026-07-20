@@ -79,7 +79,11 @@ static void paint_home(void)
     snprintf(b,sizeof b,"Температура: %d C", mcu_temp_c());
     lcd_str(6, 172, b, C_GREY, C_BLACK, 0);
     lcd_hline(196, C_GREY);
-    lcd_str(6, 206, "центр — меню", C_GREY, C_BLACK, 0);
+    extern int mcu_vdd_mv(void);
+    int vdd = mcu_vdd_mv();
+    snprintf(b, sizeof b, "%d.%02dВ", vdd/1000, (vdd%1000)/10);   /* e.g. 3.28В */
+    lcd_str(6, 206, b, vdd<3100?C_RED:C_GREY, C_BLACK, 0);       /* left-bottom */
+    lcd_str(120, 206, "центр—меню", C_GREY, C_BLACK, 0);
 }
 
 static void paint_list(const char *title, const char *const *items, int n)
@@ -239,4 +243,25 @@ void ui_handle(btn_t b)
 void ui_refresh(void)
 {
     if (dirty) paint();
+}
+
+/* framed alert overlay, ~5s, then force full repaint (also recovers LCD). */
+void ui_alert(const char *msg)
+{
+    lcd_init();                              /* re-init in case panel browned out */
+    lcd_fill(C_BLACK);
+    /* frame */
+    lcd_fill_rect(10, 80, LCD_W-20, 80, C_RED);
+    lcd_fill_rect(14, 84, LCD_W-28, 72, C_BLACK);
+    /* count UTF-8 chars (not bytes) for correct centering */
+    int nch = 0; for (const char *s=msg; *s; s++) if ((*s & 0xC0) != 0x80) nch++;
+    int w = nch * GLYPH_W;
+    int x = (LCD_W - w)/2; if (x < 16) x = 16;
+    lcd_str(x, 104, msg, C_RED, C_BLACK, 0);
+    int n2 = 0; const char *m2 = "виходи вимкнено";
+    for (const char *s=m2; *s; s++) if ((*s & 0xC0) != 0x80) n2++;
+    lcd_str((LCD_W - n2*GLYPH_W)/2, 128, m2, C_WHITE, C_BLACK, 0);
+    for (volatile int d=0; d<300000000; d++) { }   /* ~5s */
+    dirty = 1;
+    paint();
 }
