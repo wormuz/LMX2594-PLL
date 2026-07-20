@@ -52,13 +52,13 @@ def save(im,n): im.resize((W*S,H*S),Image.NEAREST).save(f"{DESK}/{n}"); print("w
 
 # ===== 1. ГОЛОВНИЙ (усе вимкнено за замовч.) =====
 im,px=cv()
-txt(px,4,2,"Вимкнено",GREY); txt(px,120,2,"UART 115200",CYAN)
+txt(px,4,2,"UNLOCK",RED); txt(px,120,2,"UART",CYAN)
 line(im,22)
-txt(px,84,30,"Частота",GREY)
-txt(px,14,52,"12 450 000",GREY,scale=2); txt(px,200,62,"кГц",GREY)
-line(im,96)
-txt(px,6,108,"Down-вихід: вимк  45",GREY)
-txt(px,6,132,"Up-вихід:   вимк  31",GREY)
+txt(px,66,28,"Частота, кГц",GREY)
+txt(px,42,54,"2 400 000",WHITE,scale=2)   # centered-ish
+line(im,98)
+txt(px,6,108,"Down-вихід: OFF  31",GREY)
+txt(px,6,132,"Up-вихід:   OFF  31",GREY)
 line(im,160)
 txt(px,6,172,"Температура: 24 C",GREY)
 line(im,196)
