@@ -11,6 +11,26 @@ static volatile uint32_t ms;
 void SysTick_Handler(void){ ms++; }
 static uint32_t now(void){ return ms; }
 
+/* ---- MCU internal temperature (ADC1 ch16). Board-heat proxy (LMX has no sensor). ---- */
+static void adc_init(void)
+{
+    RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
+    RCC->CFGR = (RCC->CFGR & ~RCC_CFGR_ADCPRE) | RCC_CFGR_ADCPRE_DIV6;  /* 72/6=12MHz */
+    ADC1->CR2 = ADC_CR2_TSVREFE | ADC_CR2_ADON;                        /* enable temp sensor */
+    ADC1->SMPR1 |= (7u << 18);                                         /* ch16 max sample time */
+    ADC1->SQR3 = 16;                                                   /* channel 16 */
+    for (volatile int d=0; d<10000; d++) {}
+    ADC1->CR2 |= ADC_CR2_CAL; while (ADC1->CR2 & ADC_CR2_CAL) {}       /* calibrate */
+}
+int mcu_temp_c(void)
+{
+    ADC1->CR2 |= ADC_CR2_ADON; while (!(ADC1->SR & ADC_SR_EOC)) {}
+    uint32_t v = ADC1->DR;
+    int mv = (int)(v * 3300 / 4095);        /* mV */
+    /* T = (V25 - Vsense)/Avg_Slope + 25; V25=1430mV, slope=4.3mV/C */
+    return (1430 - mv) * 10 / 43 + 25;
+}
+
 /* ---- clock: HSE 8MHz -> PLL x9 -> 72MHz ---- */
 static void clock_init(void)
 {
@@ -74,6 +94,7 @@ int main(void)
     clock_init();
     SysTick_Config(SYSCLK_HZ / 1000u);   /* 1ms */
     gpio_init();
+    adc_init();
     uart_init();
     buttons_init();
     ui_init();
