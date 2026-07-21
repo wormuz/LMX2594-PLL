@@ -55,14 +55,14 @@ im,px=cv()
 txt(px,4,2,"LOCK",GREEN); txt(px,120,2,"UART",CYAN)
 line(im,22)
 txt(px,66,28,"Частота, кГц",GREY)
-txt(px,42,54,"2 400 000",WHITE,scale=2)   # centered-ish
+txt(px,30,54,"2 400 000",WHITE,scale=2)
 line(im,98)
 txt(px,6,108,"Down-вихід: ON   45",GREEN)   # увімкнено
 txt(px,6,132,"Up-вихід:   OFF  31",GREY)
 line(im,160)
 txt(px,6,172,"Температура: 38 C",GREY)
 line(im,196)
-txt(px,6,206,"центр — меню",GREY)
+txt(px,6,206,"3.28В",GREY); txt(px,120,206,"центр—меню",GREY)
 save(im,"lmx_ui_1_home.png")
 
 # ===== 2. МЕНЮ =====
