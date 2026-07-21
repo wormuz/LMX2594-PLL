@@ -58,17 +58,17 @@ void ui_mark_dirty(void){ dirty = 1; }
 /* ---- painters (each does a full clear of its region) ---- */
 static void paint_home(void)
 {
-    lcd_fill(C_BLACK);
     lcd_str(4, 2, lmx_locked() ? "LOCK" : "UNLOCK",
             lmx_locked()?C_GREEN:C_RED, C_BLACK, 0);
     lcd_str(120, 2, "UART", C_CYAN, C_BLACK, 0);
     lcd_hline(22, C_GREY);
     char b[48];   /* UTF-8 Cyrillic = 2 bytes/char, need headroom */
     lcd_str(66, 28, "Частота, кГц", C_GREY, C_BLACK, 0);
-    fmt_khz(b, g_set.f_lo_khz);
-    /* center the 2x number (each char = GLYPH_W*2 = 18px wide) */
-    int fw = (int)strlen(b) * GLYPH_W * 2;
-    lcd_str2x((LCD_W - fw)/2, 54, b, C_WHITE, C_BLACK);
+    /* fixed 11-char field "  15 000 000", right-aligned -> no leftover on shrink */
+    char fs[16]; fmt_khz(fs, g_set.f_lo_khz);
+    char fpad[16]; int fl=(int)strlen(fs); int pad=(11-fl>0)?(11-fl):0;
+    for(int i=0;i<pad;i++) fpad[i]=' '; fpad[pad]=0; strcat(fpad,fs);
+    lcd_str2x(12, 54, fpad, C_WHITE, C_BLACK);       /* fixed width, no re-center jitter */
     lcd_hline(98, C_GREY);
     snprintf(b,sizeof b,"Down-вихід: %s  %2u", g_set.outa_en?"ON ":"OFF", g_set.outa_pwr);
     lcd_str(6, 108, b, g_set.outa_en?C_GREEN:C_GREY, C_BLACK, 0);
@@ -76,7 +76,7 @@ static void paint_home(void)
     lcd_str(6, 132, b, g_set.outb_en?C_GREEN:C_GREY, C_BLACK, 0);
     lcd_hline(160, C_GREY);
     extern int mcu_temp_c(void);
-    snprintf(b,sizeof b,"Температура: %d C", mcu_temp_c());
+    snprintf(b,sizeof b,"Температура: %-4d C", mcu_temp_c());
     lcd_str(6, 172, b, C_GREY, C_BLACK, 0);
     lcd_hline(196, C_GREY);
     extern int mcu_vdd_mv(void);
@@ -88,7 +88,6 @@ static void paint_home(void)
 
 static void paint_list(const char *title, const char *const *items, int n)
 {
-    lcd_fill(C_BLACK);
     lcd_str(80, 4, title, C_CYAN, C_BLACK, 0);
     lcd_hline(24, C_GREY);
     for (int i = 0; i < n; i++)
@@ -99,7 +98,6 @@ static void paint_list(const char *title, const char *const *items, int n)
 
 static void paint_freq(void)
 {
-    lcd_fill(C_BLACK);
     lcd_str(30, 6, "Задати частоту", C_CYAN, C_BLACK, 0);
     char b[FREQ_DIGITS+1];
     snprintf(b,sizeof b,"%08lu",(unsigned long)edit_val);
@@ -117,14 +115,13 @@ static void paint_freq(void)
 
 static void paint_menu(void)
 {
-    lcd_fill(C_BLACK);
     lcd_str(80, 4, "МЕНЮ", C_CYAN, C_BLACK, 0);
     lcd_hline(24, C_GREY);
     char b[48];
     for (int i = 0; i < MENU_N; i++) {
         const char *t = MENU[i];
-        if (i == 1) { snprintf(b,sizeof b,"Down-вихід: %s", g_set.outa_en?"ON":"OFF"); t = b; }
-        else if (i == 2) { snprintf(b,sizeof b,"Up-вихід:   %s", g_set.outb_en?"ON":"OFF"); t = b; }
+        if (i == 1) { snprintf(b,sizeof b,"Down-вихід: %-3s", g_set.outa_en?"ON":"OFF"); t = b; }
+        else if (i == 2) { snprintf(b,sizeof b,"Up-вихід:   %-3s", g_set.outb_en?"ON":"OFF"); t = b; }
         uint16_t fg = C_WHITE;
         if (i == 1) fg = g_set.outa_en ? C_GREEN : C_GREY;
         if (i == 2) fg = g_set.outb_en ? C_GREEN : C_GREY;
@@ -134,15 +131,16 @@ static void paint_menu(void)
     lcd_str(6, 220, "вліво — назад", C_GREY, C_BLACK, 0);
 }
 
+static screen_t last_sc = 0xFF;
 static void paint(void)
 {
+    if (sc != last_sc) { lcd_fill(C_BLACK); last_sc = sc; }  /* clear only on screen change */
     switch (sc) {
         case SC_HOME: paint_home(); break;
         case SC_MENU: paint_menu(); break;
         case SC_SYS:  paint_list("Система", SYS, SYS_N); break;
         case SC_FREQ: paint_freq(); break;
         case SC_PWR: {
-            lcd_fill(C_BLACK);
             lcd_str(60, 4, "Потужність", C_CYAN, C_BLACK, 0);
             lcd_hline(24, C_GREY);
             char b[24];

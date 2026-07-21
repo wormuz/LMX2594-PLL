@@ -110,11 +110,12 @@ int main(void)
     app_init();          /* loads settings, inits LMX, applies output/thermal state */
     uart_out("LMX2594 ready\r\n");   /* boot banner: confirms TX + baud on host */
 
-    uint32_t uv_next = 0;
+    uint32_t uv_next = 0, live_next = 0;
     for (;;) {
         btn_t b = buttons_poll(now());
         if (b != BTN_NONE) { ui_handle(b); }
         app_tick(now());
+        if (now() - live_next >= 700u) { live_next = now(); ui_mark_dirty(); }  /* live temp/Vdd/lock */
         ui_refresh();
 
         /* undervoltage guard: sag while outputs on -> kill both + alert. */

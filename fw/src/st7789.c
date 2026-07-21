@@ -38,12 +38,17 @@ static inline void dc(int v){ if(v) LCD_PORT->BSRR=(1u<<LCD_DC_PIN); else LCD_PO
 static inline void rst(int v){ if(v) LCD_PORT->BSRR=(1u<<LCD_RST_PIN); else LCD_PORT->BSRR=(1u<<(LCD_RST_PIN+16)); }
 static void dly(volatile int n){ while(n--) __NOP(); }
 
-/* Match stock FUN_08002930 exactly: SCLK low -> set data -> SCLK high (rising latch). */
+/* Fast bit-bang: one BSRR write sets MOSI + SCLK-low together, second raises SCLK
+ * (rising-edge latch). ~2 stores/bit vs 3 wrapped calls. Same waveform as stock. */
+#define M_SCLK (1u<<LCD_SCLK_PIN)
+#define M_MOSI (1u<<LCD_MOSI_PIN)
 static void wr8(uint8_t b){
+    volatile uint32_t *BSRR = &LCD_PORT->BSRR;
     for(int i=0;i<8;i++){
-        sclk(0);
-        mosi(b&0x80);
-        sclk(1);
+        /* SCLK low (reset, high half) + MOSI set/reset in one write */
+        if(b&0x80) *BSRR = M_MOSI | (M_SCLK<<16);
+        else       *BSRR = (M_MOSI<<16) | (M_SCLK<<16);
+        *BSRR = M_SCLK;            /* SCLK high -> latch */
         b<<=1;
     }
 }
