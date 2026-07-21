@@ -67,45 +67,45 @@ save(im,"lmx_ui_1_home.png")
 
 # ===== 2. МЕНЮ =====
 im,px=cv()
-txt(px,96,3,"МЕНЮ",CYAN)
+txt(px,80,4,"МЕНЮ",CYAN)   # x=80 як код
 line(im,24)
-rows=[("Задати частоту",WHITE),("Down-вихід: ON",GREEN),("Up-вихід: OFF",GREY),
+# точно як paint_menu: MENU[] + Y0=30, ROW_H=20; Down/Up зі станом
+rows=[("Задати частоту",WHITE),("Down-вихід: ON",GREEN),("Up-вихід:   OFF",GREY),
       ("Потужність виходів",WHITE),("Зберегти налаштування",WHITE),
       ("Налаштування системи",WHITE),("Назад",WHITE)]
 for i,(r,c) in enumerate(rows):
-    if i==0: txtbg(im,6,34+i*26,r)
-    else: txt(px,6,34+i*26,r,c)
+    if i==0: txtbg(im,6,30+i*20,r)
+    else: txt(px,6,30+i*20,r,c)
+line(im,214); txt(px,6,220,"вліво — назад",GREY)
 save(im,"lmx_ui_2_menu.png")
 
 # ===== 3. ЗАДАТИ ЧАСТОТУ (порозрядно) =====
 im,px=cv()
-txt(px,40,6,"Задати частоту",CYAN)
-line(im,28)
-freq="12 450 000"; x=20; y=60; active=4; ci=0
+txt(px,30,6,"Задати частоту",CYAN)   # x=30 y=6 як код
+# код: 8 цифр "%08lu", x=20 y=70, крок x += GLYPH_W+8; активний = інверсія
+digits="02400000"; x=20; y=70; active=3   # edit_digit=3 напр.
 d=ImageDraw.Draw(im)
-for ch in freq:
-    isd=ch.isdigit(); sel=(isd and ci==active)
-    if sel: d.rectangle([x-1,y-1,x+GW*2,y+GH*2],fill=WHITE); draw_glyph(px,x,y,ord(ch),BLACK,WHITE,False,2)
-    else: draw_glyph(px,x,y,ord(ch),YELLOW,BLACK,False,2)
-    if isd: ci+=1
-    x+=GW*2+2
-txt(px,90,116,"крок: 100 кГц",GREEN)
-line(im,150)
-txt(px,6,156,"вліво/вправо — розряд",GREY)
-txt(px,6,178,"вгору/вниз — змінити",GREY)
-txt(px,6,200,"центр — зберегти",GREY)
+for i,ch in enumerate(digits):
+    if i==active: d.rectangle([x-1,y-1,x+GW,y+GH],fill=WHITE); draw_glyph(px,x,y,ord(ch),BLACK,WHITE,False,1)
+    else: draw_glyph(px,x,y,ord(ch),YELLOW,BLACK,False,1)
+    x+=GW+8
+txt(px,80,120,"кГц",GREY)
+txt(px,60,150,"крок: 100000",GREEN)   # pow10(FREQ_DIGITS-1-active)
+txt(px,6,200,"L/R розряд  U/D змінити",GREY)
 save(im,"lmx_ui_3_setfreq.png")
 
 # (Свіп прибрано з UI — лишається в коді для UART-сумісності, без екрана.)
 
 # ===== 5. НАЛАШТУВАННЯ СИСТЕМИ =====
 im,px=cv()
-txt(px,20,4,"Налаштування",CYAN)
+txt(px,80,4,"Система",CYAN)   # title = paint_list("Система",...) at x=80
 line(im,24)
-rows=["Опорна:  10 МГц","UART:    115200","При старті: OFF",
+# рядки й позиції точно як код: SYS[] + Y0=30, ROW_H=20
+rows=["Опора: 10 МГц","UART: 115200","При старті: OFF",
       "Яскравість: 80%","Скинути","Назад"]
 for i,r in enumerate(rows):
-    if i==1: txtbg(im,6,32+i*26,r)
-    else: txt(px,6,32+i*26,r,WHITE)
+    if i==0: txtbg(im,6,30+i*20,r)   # sel=0 default, inverted
+    else: txt(px,6,30+i*20,r,WHITE)
+line(im,214); txt(px,6,220,"вліво — назад",GREY)
 save(im,"lmx_ui_5_system.png")
 print("готово: 5 екранів (реальний 9x18 шрифт)")
