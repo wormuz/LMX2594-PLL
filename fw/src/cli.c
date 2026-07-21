@@ -50,7 +50,7 @@ static void dispatch(void)
         if (c=='t' && len == 6 && parse_digits(line+2, 4, &v)) {
             app_set_dwell((uint16_t)v); snprintf(r,sizeof r,"OK dwell=%lu ms\r\n",(unsigned long)v); reply(r); return; }
         if (c=='v' && len == 4 && parse_digits(line+2, 2, &v)) {
-            uint8_t p=(uint8_t)(v>63?63:v); app_set_power(0,p);
+            uint8_t p=(uint8_t)(v>LMX_PWR_MAX?LMX_PWR_MAX:v); app_set_power(0,p);
             snprintf(r,sizeof r,"OK OUTA pwr=%u\r\n",p); reply(r); return; }
         if (c=='a' && len == 3 && (line[2]=='0'||line[2]=='1')) {
             app_output_enable(0, line[2]=='1'); snprintf(r,sizeof r,"OK Down=%s\r\n",line[2]=='1'?"ON":"OFF"); reply(r); return; }
@@ -62,7 +62,7 @@ static void dispatch(void)
         }
     }
     if (line[0] == 'p' && (line[1]=='a'||line[1]=='b') && len == 4 && parse_digits(line+2, 2, &v)) {
-        uint8_t p=(uint8_t)(v>63?63:v); app_set_power(line[1]=='b', p);
+        uint8_t p=(uint8_t)(v>LMX_PWR_MAX?LMX_PWR_MAX:v); app_set_power(line[1]=='b', p);
         snprintf(r,sizeof r,"OK OUT%c pwr=%u\r\n", line[1]=='b'?'B':'A', p); reply(r); return;
     }
     reply("ERR unknown cmd\r\n");

@@ -136,7 +136,7 @@ bool lmx_set_freq_khz(uint32_t f_khz)
 
 void lmx_set_power(lmx_output_t out, uint8_t pwr)
 {
-    pwr &= 0x3F;
+    if (pwr > LMX_PWR_MAX) pwr = LMX_PWR_MAX;   /* hard cap — last line of defense */
     if (out == LMX_OUTA) { r44_shadow = (r44_shadow & ~(0x3Fu << 8)) | ((uint32_t)pwr << 8); lmx_write(r44_shadow); }
     else                 { r45_shadow = (r45_shadow & ~0x3Fu) | pwr; lmx_write(r45_shadow); }
 }

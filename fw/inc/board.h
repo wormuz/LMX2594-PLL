@@ -67,6 +67,10 @@
 #define LMX_PFD_KHZ     50000u    /* phase-detector freq in kHz (reverse DAT_08006298) */
 #define LMX_VCO_MIN_KHZ 7500000u  /* 7.5 GHz */
 #define LMX_VCO_MAX_KHZ 15000000u /* 15  GHz */
+/* Hard output-power cap. TI: above 40 the driver saturates (power drops, no gain),
+ * and it keeps the level safer for sensitive SDR front-ends. Clamp everywhere. */
+#define LMX_PWR_MAX 40u
+
 #define LMX_FOUT_MIN_KHZ 20000u   /* 20 MHz */
 #define LMX_FOUT_MAX_KHZ 15000000u/* 15 GHz — VCO max (direct). 15.5G on the label is
                                    * unreachable: LMX2594 VCO is 7.5-15 GHz, output can't

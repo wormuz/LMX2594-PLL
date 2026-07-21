@@ -220,8 +220,8 @@ void ui_handle(btn_t b)
         if (b == BTN_DOWN) { sel = (sel==2)?0:sel+1; dirty=1; }
         if (b == BTN_LEFT || b == BTN_RIGHT) {
             int d = (b==BTN_RIGHT)?+1:-1;
-            if (sel==0) app_set_power(0,(uint8_t)((g_set.outa_pwr+d)&0x3F));
-            else if (sel==1) app_set_power(1,(uint8_t)((g_set.outb_pwr+d)&0x3F));
+            if (sel==0) app_set_power(0,(uint8_t)(g_set.outa_pwr+d>LMX_PWR_MAX?LMX_PWR_MAX:(g_set.outa_pwr+d<0?0:g_set.outa_pwr+d)));
+            else if (sel==1) app_set_power(1,(uint8_t)(g_set.outb_pwr+d>LMX_PWR_MAX?LMX_PWR_MAX:(g_set.outb_pwr+d<0?0:g_set.outb_pwr+d)));
             dirty=1;
         }
         if (b == BTN_CENTER && sel==2) { sc=SC_MENU; sel=0; dirty=1; }
