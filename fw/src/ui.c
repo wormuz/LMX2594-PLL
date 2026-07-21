@@ -101,15 +101,18 @@ static void paint_freq(void)
     lcd_str(30, 6, "Задати частоту", C_CYAN, C_BLACK, 0);
     char b[FREQ_DIGITS+1];
     snprintf(b,sizeof b,"%08lu",(unsigned long)edit_val);
-    int x=20, y=70;
+    /* 2x digits, tight, active digit inverted. Full row width fixed -> no artifacts. */
+    int x=24, y=64;
     for (int i=0;i<FREQ_DIGITS;i++){
         char d[2]={b[i],0};
-        lcd_str(x, y, d, i==edit_digit?C_WHITE:C_YELLOW_, C_BLACK, i==edit_digit);
-        x += GLYPH_W+8;
+        if (i==edit_digit) lcd_str2x(x, y, d, C_BLACK, C_WHITE);   /* inverted digit */
+        else               lcd_str2x(x, y, d, C_YELLOW_, C_BLACK);
+        x += GLYPH_W*2 + 2;
     }
-    lcd_str(80, 120, "кГц", C_GREY, C_BLACK, 0);
-    char step[20]; snprintf(step,sizeof step,"крок: %lu", (unsigned long)pow10u(FREQ_DIGITS-1-edit_digit));
-    lcd_str(60, 150, step, C_GREEN, C_BLACK, 0);
+    lcd_str(200, 76, "кГц", C_GREY, C_BLACK, 0);
+    /* padded to fixed width so shorter step erases previous longer value */
+    char step[24]; snprintf(step,sizeof step,"крок: %-9lu", (unsigned long)pow10u(FREQ_DIGITS-1-edit_digit));
+    lcd_str(20, 130, step, C_GREEN, C_BLACK, 0);
     lcd_str(6, 200, "L/R розряд  U/D змінити", C_GREY, C_BLACK, 0);
 }
 
